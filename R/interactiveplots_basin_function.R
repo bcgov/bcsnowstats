@@ -399,7 +399,7 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
     p <- plotly::partial_bundle(p) # make the size smaller
 
     # Save plot
-    if (save %in% c("True", "true", "T", "TRUE", TRUE)) {
+    if (any(save %in% c("True", "true", "T", "TRUE", TRUE))) {
       htmlwidgets::saveWidget(plotly::as_widget(p),
                               paste0(path_basin, basin, ".html"),
                               selfcontained = F, # for making the finised product smaller and faster to save
