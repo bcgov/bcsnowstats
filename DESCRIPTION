@@ -1,0 +1,26 @@
+Package: bcsnowstats
+Title: BC Snow Statistics
+Version: 0.0.0.9000
+Authors@R: 
+    c(person(given = "Ashlee",
+             family = "Jollymore",
+             role = c("aut", "cre"),
+             email = "Ashlee.Jollymore@gov.bc.ca"))
+Maintainer: Ashlee Jollymore <Ashlee.Jollymore@gov.bc.ca>
+Description: This package calculates statistics for snow sites (both automated and manual stations) in British Columbia, Canada. This includes statistics for the period of record (POR), as well as user-defined normal periods.
+License: Apache License (== 2.0) | file LICENSE
+Encoding: UTF-8
+LazyData: TRUE
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Imports:
+    dplyr,
+    magrittr,
+    plotly,
+    data.table
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)

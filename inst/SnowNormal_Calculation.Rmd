@@ -1,0 +1,579 @@
+---
+title: "Snow Normals"
+author: "Ashlee Jollymore"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    theme: united
+    number_sections: true
+---
+<!--
+Copyright 2021 Province of British Columbia
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and limitations under the License.
+-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, results = 'hide', message=FALSE, warning=FALSE, error=FALSE)
+
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(bcsnowdata)
+library(bcsnowstats)
+library(ggplot2)
+
+#setwd('C:/Users/AJOLLYMO/RProjects/bcsnowstats')
+```
+
+<!-- badges: start -->
+[![img](https://img.shields.io/badge/Lifecycle-Maturing-007EC6)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
+<!-- badges: end -->
+
+# Details Regarding the Calculation of Snow Normals Within the bcsnowstats() Function
+
+This report provides a summary regarding how snow normals were calculated by functions within the 'bcsnowstats' function. These functions were updated during the 2020-2021 snow year as the BC River Forecast Centre (RFC) began the process of updating the 30-year normal period from 1981-2010 to 1991-2020. This document is meant to detail how snow normals are calculated, including how missing data is compensated for within both automated (ASWE) and manual stations, and when such data filling processes are applied prior to the calculation of statistics.
+
+Snow normals are typically calculated for a 30 year period. A 30-year period (updated every decade, and always spanning years from 1-0) has been adopted by the meteorological community as the standard for comparing conditions between years.
+
+This report contains two parts: 
+A) Calculating normals for ASWE stations, and: 
+B) Calculating normals for manual stations.
+
+Normal calculation (including data filling) was done as per the NRCS US Department of Agriculture:
+https://www.wcc.nrcs.usda.gov/normals/30year_normals_data.htm
+
+## Normals for Data from Automated Snow Weather Stations (ASWE)
+Prior to calculating mean SWE values over the moving 30 year normal window, the raw SWE data from ASWE stations was first subject to several pre-processing steps to compensate for the quality of the underlying snow data.
+
+### Data Preprocessing 
+Raw ASWE data is present at daily intervals for pre-2001 and hourly intervals for post 2001 data. Thus, the mean daily SWE value was first calculated for all data prior to normal calculation.
+
+Secondly, the number of years that the station has data for within the specified normal period was calculated. Only years with at least 80% of the daily SWE data within the snow accumulation and melt period (October - May) was counted as a year of data. The 80% threshold was used as suggested from the World Meteorologic Organization.
+
+Thirdly, the number of years of data was used to determine how data was treated prior to calculating normals. Three thresholds were used: 
+
+1. If a station had at least 20 years of data within the normal period, then the normals were calculated from the mean SWE for each day without further manipulation.
+2. If a station had between 10-19 years of data, data from adjacent stations were used to fill in data. If this data filling procedure resulted in at least 20 years of data, then snow normals were calculated. If not, then no normal values were calculated for the station. 
+
+3. If a station had less that 10 years of data, no normals were calculated. 
+
+Details regarding the application of these thresholds is shown below.
+
+#### 1. Stations with 20 or More Years of Data
+
+Stations with at least 20 years of data (where a year is only counted if there was at least 80% of the daily data present within the snow accumulation and melt period) was used without modification to calculate normals. The only data pre-processing step in this case was the calculation of daily mean SWE values in cases where raw hourly values were available.
+
+#### 2. Stations with 10-19 Years of Data
+
+If a station had between 10-19 years of data within the normal period, then the data was extended using adjacent stations. Two methods were tested in filling data (normal ratio method and ordinary least squares regression); currently, only the normal ratio method is used to fill in data.
+
+##### Stations with 10-19 Years of Data - SWE Data Retrieval 
+
+Firstly, all raw data for the station of interest was collected from the BC Data Catalogue. If the the number of years with at least 80% of the data available within a given water year fell between 10-19 years, then the location of the station was used to identify adjacent ASWE stations (within 100 km). Raw data from these sites was then retrieved (also from the BC Data Catalogue).
+
+In the image below, the location of ASWE site 1F06P (14 years of data between 1991-2020) is shown as a orange dot; the 100 km radius around the site is shown as a black circle, and ASWE sites within this 100 km buffer are shown as black dots. 
+
+![Sites adjecent to 1F06](C:/Users/AJOLLYMO/RProjects/bcsnowstats/vignettes/adjacent_sites.png)
+
+
+Next, a series of data pre-processing steps were taken prior to data filling.
+
+##### Data Preprocessing
+
+Several data preprocessing steps were taken with data from both the station of interest and adjacent stations prior to calculating relationships between the two to backfill data for the station of interest. These steps were done predominately in response to the quality of the data, which is highly variable between different sites.
+
+
+Firstly, the daily SWE for each julian day was calculated for each site (e.g., using all the data for a specific day within the historic data). The mean SWE by julian day was then smoothed using a centered 7-day rolling mean. This was to compensate for when the raw data had large gaps, drops or increases that would otherwise create a very 'jumpy' timeseries. Lastly, any data data gaps were filled using linear interpolation; gaps larger than 7 days were not filled via linear interpolation.
+
+This created a single timeseries for both the station of interest and adjacent stations:
+
+![Sites adjecent to 1F06](C:/Users/AJOLLYMO/RProjects/bcsnowstats/vignettes/adjacentsites_meanSWE.png)
+
+This timeseries shows the mean SWE by julian day for the station of interest. Mean SWE values by day for each of the stations within 100 km of the station of interest are shown in colours other than blue.
+
+These mean timeseries were used to determine correlation relationships used to fill missing data within the station of interest. As of present, only the normal ratio method (Data Filling Method 1) is used, although a ordinary least squared model (Data Filling Method 2) was also investigated.
+
+##### Data Filling Method 1 - Normal Ratio Method
+
+The first method to fill in data was the normal ratio method. In this method, the ratio between the mean daily SWE at the station of interest and the mean daily SWE for an adjacent station was first found. Missing data for the station of interest was then calculated using this ratio multiplied by the SWE value at an adjacent station. If multiple stations were adjacent to the station of interest, the filled in SWE value was calculated as the mean of all of the SWE values.
+
+SWEx = 1/n(sum(Nx/Ni * SWEi))
+
+where SWEx is the estimated missing SWE value at station x, n is the number of nearby stations (within 100 km), SWEi is the SWE value at the ith replacing station, and Nx and Ni are the normal SWE value for the x and ith station at a particular julian day.
+
+Gaps within the SWE data for the station of interest were filled using this estimated SWEx value. Lastly, to ensure that the data filling procedure did not result in large, artificial drops or rises in SWE, the entire timeseries was smoothed using a 7-day rolling mean, and this timeseries used to calculate normal statistics.
+
+
+![Timeseries of filled data](C:/Users/AJOLLYMO/RProjects/bcsnowstats/vignettes/data_filled.png)
+
+The above figure shows daily SWE values for 1F06P from 1991-2020 in black. The SWE timeseries estimated from adjacent sites is show in blue.
+
+##### Data Filling Method 2 - Ordinary Least Squares Method
+
+In addition to the normal ratio method, a ordinary least squares model (OLS) was also explored for filling in data from adjacent sites. This model would use the correlation between the station of interest and adjacent stations to fill in missing data. Initially, only stations that were highly correlated (Pr >= 0.95) to the SWE at the station of interest was used. 
+
+However, investigating the relationship between SWE at the station of interest and adjacent stations (specifically, the linearity of these relationships) showed that such relationships are very dependent on the time of year (specifically, whether peak SWE at the station of interest had been observed). During the snow accumulation season (before the peak of the station you are looking at), the relationship between station and adjacent stations is generally well described by a linear relationship.
+
+After this, the relationship is logarithmic:
+
+y = ln(x) when adjacent station peak date is > peak date of soi
+
+y = 2x when the adjacent station peak is < peak date of soi
+
+![Site of interest (x) versus adjacent (y)](C:/Users/AJOLLYMO/RProjects/bcsnowstats/vignettes/stationofinterest_versus_adjacent.png)
+
+The use of a linear model to predict SWE values from adjacent stations during the snow accumulation period and a logarithmic model to predict SWE during the snow melt season was investigated. However, this 'twinned' model produced highly suspect and erroneous data (mainly for the snow melt period), and so was shelved until a more accurate approach for detailing the snow melt period can be developed. 
+
+#### 3. Stations with less than 10 years of data
+Stations with less than 10 years of data within the normal period were excluded from the analysis. 
+
+Future work will investigate whether ASWE sites that were previously manual sites can be backfilled using manual snow survey data to ensure sufficient data to calculate a snow normal (see "Future Work").
+
+### Comparing SWE Normals Between Methods
+
+The normal method detailed above was used to calculate snow normals for the 1981-2010 and 1991-2020 period. These datasets were then compared to previously calculated normals for the 1981-2010 period (i.e., those used within the RFC snow bulletin between 2010-2020), as well as the snow normals for 1991-2020 within the current snow bulletin. 
+
+Firstly, normals from the same timeperiod were compared to determine how close these values are to those calculated by the R process detailed within this document. 
+
+#### Comparing SWE Normals Calculated for 1981-2010
+
+Firstly, the difference between normals previously used within the snow bulletin for the 1981-2010 period were compared to those calculated for the same period through the R process. 
+
+```{r normal_comparison, echo = FALSE, results = 'hide', message=FALSE, warning=FALSE, error=FALSE}
+
+# ------------------------------------------------
+# Get normals for 1981-2020
+aswe_n_1981t2010 <- bcsnowstats::ASWE_normals_1981t2010
+
+aswe_n_1981t2010 <- cbind(aswe_n_1981t2010[,1:2], aswe_n_1981t2010[ , grepl( "SWE" , names( aswe_n_1981t2010 ) ) ])
+
+colnames(aswe_n_1981t2010) <- gsub("_", "", colnames(aswe_n_1981t2010))
+colnames(aswe_n_1981t2010) <- gsub("SWE", "", colnames(aswe_n_1981t2010))
+
+aswe_n_1981t2010_melt <- aswe_n_1981t2010 %>%
+  dplyr::select(-c("MINPEAK", "MAXPEAK")) %>%
+  reshape2::melt(id = c("STATIONID", "STATIONNAME")) %>%
+  dplyr::rename(date = variable) %>%
+  dplyr::rename(normal_1981t2010 = value) %>%
+  dplyr::mutate(normal_1981t2010 = round(normal_1981t2010, digits = 0)) %>%
+  dplyr::mutate(date = as.Date(date, "%b%d")) %>%
+  dplyr::mutate(date = format(date, "%b%d"))
+
+# ------------------------------------------------
+# Get normals calculated by Jon
+aswe_n_1991t2020_excel <- openxlsx::read.xlsx("G:/Snow/Normals_2020/ASWS_Normals_1991-2020.xlsx")
+colnames(aswe_n_1991t2020_excel) <- aswe_n_1991t2020_excel[1,]
+aswe_n_1991t2020_excel <- aswe_n_1991t2020_excel[-1,] %>%
+  dplyr::select(-count, -est) %>%
+  dplyr::rename(STATIONID = ID, STATIONNAME = NAME)
+
+aswe_n_1991t2020_excel_melt <- reshape2::melt(aswe_n_1991t2020_excel, id = c("STATIONID", "STATIONNAME")) %>%
+  dplyr::rename(date = variable) %>%
+  dplyr::rename(normal_1991t2020_excel = value) %>%
+  dplyr::mutate(normal_1991t2020_excel = round(as.numeric(normal_1991t2020_excel), digits = 0)) %>%
+  dplyr::mutate(date = as.Date(date, "%b%d")) %>%
+  dplyr::mutate(date = format(date, "%b%d"))
+
+# ------------------------------------------------
+# Get the R process data
+
+# Read in the csv files created and get only the 1st and 15th
+get1_15 <- function(site, normal_max, normal_min, force) {
+
+  normal <- normal_site(site, normal_max, normal_min, force)
+
+  if (all(!is.na(normal))) {
+   normal_1_15 <- normal %>%
+     dplyr::mutate(Day = lubridate::day(as.Date(paste0(m_d, "-2020"), format = "%m-%d-%Y"))) %>%
+     dplyr::filter(Day == "1" | Day == "15") %>%
+     dplyr::select(-Day)
+  } else {
+    normal_1_15 <- normal
+  }
+  return(normal_1_15)
+}
+
+# Retrieve the snow normals for all the ASWE sites. Use archived values
+aswe_sites <- bcsnowdata::snow_auto_location()$LOCATION_ID
+
+#normals_1t15 <- lapply(aswe_sites, get1_15,
+#                       normal_max = 2020,
+#                       normal_min = 1991,
+#                       force = TRUE)
+
+#normals_1t15_unfold <- do.call(rbind, normals_1t15) %>%
+#  dplyr::mutate(month = lubridate::month(as.Date(paste0(m_d, "-2020"), format = "%m-%d-%Y"))) %>%
+#  dplyr::filter(month >= 10 | month <= 6)
+
+aswe_n_1991t2020_r <- read.csv(paste0("G:/Snow/Normals_2020/snownormals_1991t2020_rprocess/", "aswe_firstfiftheenth", ".csv")) %>%
+#aswe_n_1991t2020_r <- normals_1t15_unfold %>%
+  dplyr::select(station_id, normal_swe_mean, m_d) %>%
+  dplyr::mutate(date = as.Date(m_d, "%m-%d")) %>%
+  dplyr::mutate(date = format(date, "%b%d")) %>%
+  dplyr::rename(STATIONID = station_id, normal_1991t2020_r = normal_swe_mean) %>%
+  dplyr::mutate(normal_1991t2020_r = round(normal_1991t2020_r, digits = 0)) %>%
+  dplyr::select(-m_d)
+
+# Get the data for 1981-2010
+aswe_n_1981t2010_r <- read.csv(paste0("G:/Snow/Normals_2020/snownormals_1991t2020_rprocess/", "aswe_firstfiftheenth_1981t2010", ".csv")) %>%
+#aswe_n_1991t2020_r <- normals_1t15_unfold %>%
+  dplyr::select(station_id, normal_swe_mean, m_d) %>%
+  dplyr::mutate(date = as.Date(m_d, "%m-%d")) %>%
+  dplyr::mutate(date = format(date, "%b%d")) %>%
+  dplyr::rename(STATIONID = station_id, normal_1981t2010_r = normal_swe_mean) %>%
+  dplyr::mutate(normal_1981t2010_r = round(normal_1981t2010_r, digits = 0)) %>%
+  dplyr::select(-m_d)
+
+excel_diff <- dplyr::full_join(aswe_n_1981t2010_melt %>% dplyr::select(-STATIONNAME),
+                        aswe_n_1991t2020_excel_melt %>% dplyr::select(-STATIONNAME))
+
+excel_diff_all_1 <- dplyr::full_join(excel_diff, aswe_n_1991t2020_r) 
+excel_diff_all <- dplyr::full_join(excel_diff_all_1, aswe_n_1981t2010_r) %>%
+  dplyr::mutate(difference_1981_excel1991 = round(as.numeric(normal_1981t2010) - as.numeric(normal_1991t2020_excel), digits = 0)) %>%
+  dplyr::mutate(difference_1981_r1991 = round(as.numeric(normal_1981t2010) - as.numeric(normal_1991t2020_r), digits = 0)) %>%
+  dplyr::mutate(difference_1981_r1981 = round(as.numeric(normal_1981t2010) - as.numeric(normal_1981t2010_r), digits = 0)) %>%
+  dplyr::mutate(difference_excel_r_1991 = round(as.numeric(normal_1991t2020_excel) - as.numeric(normal_1991t2020_r), digits = 0)) %>%
+  dplyr::mutate(difference_r1981_r1991 = round(as.numeric(normal_1981t2010_r) - as.numeric(normal_1991t2020_r), digits = 0)) %>%
+  dplyr::mutate(difference_r1981_excel1991 = round(as.numeric(normal_1981t2010_r) - as.numeric(normal_1991t2020_excel), digits = 0))
+
+# show the difference between the 1981 normals - previous and R
+excel_diff_1981 <- excel_diff_all %>%
+  dplyr::select(STATIONID, date, normal_1981t2010, normal_1981t2010_r, difference_1981_r1981) %>%
+  dplyr::arrange(date, -abs(difference_1981_r1981), STATIONID) %>%   
+  dplyr::mutate(date_dmy = as.Date(paste0("2020", date), format = "%Y%b%d")) %>%
+  dplyr::arrange(date_dmy)
+
+# Plot differences by survey period
+p_1981 <- ggplot(data = excel_diff_1981) +
+  geom_point(aes(x = STATIONID, y = difference_1981_r1981)) + 
+  facet_wrap(~date)
+
+#p_1981
+
+ggplot(data = excel_diff_1981 %>% dplyr::filter(!is.na(difference_1981_r1981)), 
+       aes(x = date, y = difference_1981_r1981)) +
+  geom_boxplot() + 
+  ylab("Difference between previous 1981-2010 normal to R 1981-2010 (mm)") + 
+  ggtitle("Comparing Snow Bulletin Normals to R Process Normals: 1981-2010")
+
+excel_r_issues_1981 <- excel_diff_1981 %>%
+  dplyr::filter(abs(difference_1981_r1981) > 30) %>%
+  dplyr::arrange(-abs(difference_1981_r1981), STATIONID, date) %>%
+  dplyr::rename(Station_ID = STATIONID, Date = date, "Difference Between Previous and R Normals - 1981 to 2010" = difference_1981_r1981,
+                "Previous Normal - 1981 to 2010" = normal_1981t2010, "R Normal - 1981 to 2010" = normal_1981t2010_r) 
+
+# Append the number of years of raw and filled in data
+#unique(excel_r_issues_1981$Station_ID)
+#normal_issues = normal_site(site = unique(excel_r_issues_1981$Station_ID)[1], normal_max = 2010, normal_min = 1981)
+
+```
+The boxplot above shows differences between the snow bulletin normals and the R process normals for snow bulletin survey periods. A total of `r length(unique(excel_r_issues_1981$Station_ID))` ASWE sites had at least one survey period that differed from the previously used normals by more than 30 mm SWE. A table of all normals across all sites and survey periods is shown within the appendix.
+
+#### Comparing SWE Normals Calculated for 1991-2020
+
+Secondly, normals between those currently used in the snow bulletin and the R process were compared for the 1991-2020 period.
+
+```{r 1991t2020, echo = FALSE, results = 'hide', message=FALSE, warning=FALSE, error=FALSE}
+# ===========================
+# Compare 1991 normals used in snow bulletin to that created by the process
+excel_diff_1991 <- excel_diff_all %>%
+  dplyr::select(STATIONID, date, normal_1991t2020_excel, normal_1991t2020_r, difference_excel_r_1991) %>%
+  dplyr::arrange(date, -abs(difference_excel_r_1991), STATIONID) %>%
+  dplyr::mutate(date_dmy = as.Date(paste0("2020", date), format = "%Y%b%d")) %>%
+  dplyr::arrange(date_dmy)
+
+# Plot differences by survey period
+p_1991 <- ggplot(data = excel_diff_1991) +
+  geom_point(aes(x = STATIONID, y = difference_excel_r_1991)) + 
+  facet_wrap(~date)
+
+#p_1991
+
+ggplot(data = excel_diff_1991 %>% dplyr::filter(!is.na(difference_excel_r_1991)), 
+       aes(x = date, y = difference_excel_r_1991)) +
+  geom_boxplot() + 
+  ylab("Difference between current 1991-2010 normal to R 1991-2020 (mm)") + 
+  ggtitle("Comparing Snow Bulletin Normals to R Process Normals: 1991-2020")
+
+# Get only those sites where there is significant differences between the r and excel
+excel_r_issues_1991 <- excel_diff_1991 %>%
+  dplyr::filter(abs(difference_excel_r_1991) > 30) %>%
+  dplyr::arrange(-abs(difference_excel_r_1991), date) %>%
+  dplyr::rename(Station_ID = STATIONID, Date = date, 
+                "Difference Between Excel and R Normals - 1991 to 2020" = difference_excel_r_1991,
+                "Normals Used in Snow Bulletin - 1991 to 2020" = normal_1991t2020_excel, "R Normal - 1991 to 2020" = normal_1991t2020_r)
+
+
+#st_issues <- unique(excel_r_issues$STATIONID)
+
+
+
+#issues <- read.csv(paste0("G:/Snow/Normals_2020/snownormals_1991t2020_rprocess/", "aswe_firstfiftheenth", ".csv")) %>%
+#  dplyr::filter(station_id %in% st_issues)
+```
+The boxplot above shows differences between the snow bulletin normals and the R process normals for snow bulletin survey periods from 1991-2020. A total of `r length(unique(excel_r_issues_1991$Station_ID))` ASWE sites had at least one survey period that differed from the previously used normals by more than 30 mm SWE. A table of all normals across all sites and survey periods is shown within the appendix.
+
+### Comparing 1981-2020 SWE Normals to 1991-2020 SWE Normals
+
+SWE normals calculated for the 1981-2010 period were also compared to those calculated for the 1991-2020 period to observe whether  the shift in normal time resulted in a significant shift in SWE normals for a particular site. Two sets of SWE normals for the 1981-2010 period exist: those previously used within the snow bulletin, and those calculated using the R process. Two sets of SWE normals exist for the 1991-2020 period: one used within the current snow bulletin, and one calculated using the R process outlined in this document. 
+
+```{r betweenperiods, echo = FALSE, results = 'hide', message=FALSE, warning=FALSE, error=FALSE}
+
+diff_1981T1991 <- excel_diff_all %>%
+  dplyr::select(STATIONID, date, 
+                difference_1981_excel1991, difference_1981_r1991,
+                difference_r1981_r1991, difference_r1981_excel1991) %>%
+  dplyr::rename("Difference - 1981t2010 and current 1991t2020" = difference_1981_excel1991,
+                "Difference - 1981t2010 and R 1991t2020" = difference_1981_r1991,
+                "Difference - R 1981t2010 and R 1991t2020" = difference_r1981_r1991,
+                "Difference - R 1981t2010 and current 1991t2020" = difference_r1981_excel1991)
+
+diff_1981T1991_melt <- reshape2::melt(diff_1981T1991, id = c("STATIONID", "date")) %>%
+  dplyr::mutate(date_dmy = as.Date(paste0("2020", date), format = "%Y%b%d")) %>%
+  dplyr::arrange(date_dmy)
+
+# Plot the difference betwen the previously used nomrals and the 1991 excel and R normals
+
+ggplot(diff_1981T1991_melt, aes(x = date, y = value, fill = variable)) +
+  geom_boxplot() + 
+  ylab("Difference in SWE (mm)")
+
+
+
+```
+The above boxplot shows differences between: 1) the 1981-2010 and 1991-2020 snow bulletin normals; 2) the snow bulletin 1981-2010 normals and the 1991-2020 R normals; 3) the 1981-2010 snow bulletin normals and the 1991-2020 R normals, and 4) the 1981-2010 R normals and the 1991-2020 R normals. All ASWE normals for all periods are shown in the Appendix.
+
+### Future Work
+
+Future work will focus on stations that have been converted from a manual to ASWE station, and whether manual data can be used to fill in data missing from the ASWE period of record. 
+
+## How Snow Normals For Manual Sites
+For manual snow survey periods with 10 - 20 years of record for a particular site, a correlation relationship (based on neighboring stations with a long period of record) was used to fill in missing years. If this resulted in at least 20 years of data, then a normal was calculated for the survey period. This section details how data for stations with 10-20 years of data for a particular survey period was filled using adjacent stations. Normals were calculated directly for survey periods with 20-30 years of data. Survey periods that had less than 10 years of record were not used to calculate manuals. 
+
+### Data Filling for Survey Periods with 20-30 Years of Data
+Survey periods for particular stations with 10-20 years of observations were filled using data from manual sites within 100 km of the site of interest. Briefly, these adjacent stations were identified and their data retrieved. The relationship between these stations and the station of interest was determined using an ordinary least squares regression, where only those stations with a significant relationship (p >= 0.95) were used. Data for the station of interest was then filled using these modelled SWE values. If data filling resulted in at least 20 years of data for a particular survey period, then a normal was calculated for that particular survey period.
+
+### How SWE Normals for Manual Stations Compare to Previously Calculated SWE Normals
+
+Normals calculated for manual stations using the above method were compared to two datasets: the 1981-2010 SWE normals previously used within the snow bulletins, and the 1991-2020 SWE normals currently used within the snow bulletin.
+
+Firstly, SWE normals were compared to the same period of record to determine how the R process differed from other SWE normal calculations. Secondly, both sets of 1981-2010 normals were compared to the two sets of 1991-2020 normals to visualize how SWE normals shifted when the normal window shifted.
+
+#### Comaparing R Process Normals to Snow Bulletin Normals
+
+To validate the method used within the R process (especially data filling for sites with 10-20 years of data), normals calculated via the R process were compared to those used within the snow bulletin.
+
+##### 1981-2010 Normals
+Firstly, normals for the 1981-2010 period were compared:
+
+```{r manual_1981_1981, echo = FALSE, results = 'hide', message=FALSE, warning=FALSE, error=FALSE}
+# Get the manual normals for the R process using the normal_site() function 
+
+manual_sites <- bcsnowdata::snow_manual_location()$LOCATION_ID
+
+# --------------------- 1981-2010
+# 1981-2010 manual normals
+manual_normals_1981_r <- lapply(manual_sites, normal_site,
+                              normal_max = 2010, normal_min = 1981)
+
+# unfold the data
+manual_normals_1981_r_unfold <- do.call(plyr::rbind.fill, manual_normals_1981_r) %>%
+  dplyr::select(survey_period, normal_swe_mean, numberofyears_estimated, numberofyears_raw, station_id) %>%
+  dplyr::rename(STATIONID = station_id, date = survey_period, normal_1981_r = normal_swe_mean) %>%
+  dplyr::mutate(date = as.Date(date, "%d-%b")) %>%
+  dplyr::mutate(date = format(date, "%b%d"))
+
+# Previous normals
+manual_normals_1981_sb <- manual_normals_1981t2010 %>%
+  dplyr::select(STATIONID, STATIONNAME, JAN_1_SWE, FEB_1_SWE, MAR_1_SWE, APR_1_SWE, MAY_1_SWE, MAY_15_SWE, JUN_1_SWE, JUN_15_SWE)
+                
+colnames(manual_normals_1981_sb) <- gsub("_", "", colnames(manual_normals_1981_sb))
+colnames(manual_normals_1981_sb) <- gsub("SWE", "", colnames(manual_normals_1981_sb))
+
+manual_normals_1981_sb_melt <- manual_normals_1981_sb %>%
+  reshape2::melt(id = c("STATIONID", "STATIONNAME")) %>%
+  dplyr::rename(date = variable) %>%
+  dplyr::rename(normal_1981t2010_sb = value) %>%
+  dplyr::mutate(normal_1981t2010_sb = round(normal_1981t2010_sb, digits = 0)) %>%
+  dplyr::mutate(date = as.Date(date, "%b%d")) %>%
+  dplyr::mutate(date = format(date, "%b%d"))
+
+# Compare the 1981-2010 normals to previous - bind together
+excel_diff_man_1981 <- dplyr::full_join(manual_normals_1981_r_unfold, manual_normals_1981_sb_melt) %>%
+  dplyr::mutate(diff_sb_r_1981 = round((normal_1981t2010_sb - normal_1981_r), digits = 0))
+
+ggplot(data = excel_diff_man_1981, aes(x = date, y = diff_sb_r_1981)) +
+  geom_boxplot() + 
+  ylab("Difference between previous manual 1981-2010 normal to R 1981-2010 (mm)") +
+  ggtitle("Difference Between Previous 1981-2010 SWE Normals to R Process 1981-2010 SWE Normals - Manual Sites")
+
+excel_diff_man_1981_50 <- excel_diff_man_1981 %>%
+  dplyr::filter(diff_sb_r_1981 >= 50)
+
+```
+
+There are `r length(unique(excel_diff_man_1981_50$STATIONID))` stations that have at least one survey period where the difference in normals between the previous normals and the R process is greater or equal to 50 mm of SWE. A full table showing the difference in normals for the 1981-2010 period for all sites and survey periods is shown in the appendix.
+
+##### 1991-2020 Normals
+Secondly, the 1991-2020 normals were compared to those used within the snow bulletin. A table showing all of the normals (with the difference between the two processes) is contained in the Appendix.
+
+``` {r manual_1991_1991, echo = FALSE, results = 'hide', message=FALSE, warning=FALSE, error=FALSE}
+# --------------------- 1991-2020
+manual_normals_1991_r <- lapply(manual_sites, normal_site,
+                              normal_max = 2020, normal_min = 1991)
+
+# unfold the data
+manual_normals_r_1991_unfold <- do.call(plyr::rbind.fill, manual_normals_1991_r)  %>%
+  dplyr::select(survey_period, normal_swe_mean, numberofyears_estimated, numberofyears_raw, station_id) %>%
+  dplyr::rename(STATIONID = station_id, date = survey_period, normal_1991_r = normal_swe_mean) %>%
+  dplyr::mutate(date = as.Date(date, "%d-%b")) %>%
+  dplyr::mutate(date = format(date, "%b%d"))
+
+# ---------------------
+# Get the current 1991-2020 manual normals
+manual_1991t2020_excel <- data.frame(openxlsx::read.xlsx("G:/Snow/Normals_2020/MSS_Normals_1991-2020.xlsx"))
+
+colnames(manual_1991t2020_excel) <- manual_1991t2020_excel[1,]
+
+manual_1991t2020_excel <- manual_1991t2020_excel[-1,] %>%
+  dplyr::select(ID, NAME, JAN1, FEB1, MAR1, APR1, MAY1, MAY15, JUN1, JUN15) %>%
+  dplyr::rename(STATIONID = ID, STATIONNAME = NAME)
+
+manual_1991t2020_sb_melt <- reshape2::melt(manual_1991t2020_excel, id = c("STATIONID", "STATIONNAME")) %>%
+  dplyr::rename(date = variable) %>%
+  dplyr::rename(normal_1991t2020_sb = value) %>%
+  dplyr::mutate(normal_1991t2020_sb = round(as.numeric(normal_1991t2020_sb), digits = 0)) %>%
+  dplyr::mutate(date = as.Date(date, "%b%d")) %>%
+  dplyr::mutate(date = format(date, "%b%d"))
+
+## Bind together 
+# Compare the 1981-2010 normals to previous - bind together
+excel_diff_man_1991 <- dplyr::full_join(manual_normals_r_1991_unfold, manual_1991t2020_sb_melt) %>%
+  dplyr::mutate(diff_sb_r_1991 = round((normal_1991t2020_sb - normal_1991_r), digits = 0))
+
+# plot
+ggplot(data = excel_diff_man_1991, aes(x = date, y = diff_sb_r_1991)) +
+  geom_boxplot() + 
+  ylab("Difference between manual 1991-2020 normal to R 1991-2020 (mm)") +
+  ggtitle("Difference Between Snow Bulletin 1991-2020 SWE Normals to R Process 1981-2010 SWE Normals - Manual Sites")
+
+excel_diff_man_1991_50 <- excel_diff_man_1991 %>%
+  dplyr::filter(diff_sb_r_1991 >= 50)
+
+```
+
+There are `r length(unique(excel_diff_man_1991_50$STATIONID))` stations that have at least one survey period where the difference in normals between the currently used normals and the R process is greater or equal to 50 mm of SWE. A full table showing differences between the two normals for the 1991-2020 period for all sites and survey periods is shown in the appendix.
+
+#### Comparing 1981-2010 Normals to 1991-2020 Normals
+
+Normals for the 1981-2010 period were then compared to those calculated for the 1991-2020 period to illustrate how snow patterns shifted with the change in normal period.
+
+``` {r manual_1981_1991, echo = FALSE, results = 'hide', message=FALSE, warning=FALSE, error=FALSE}
+
+excel_diff_man_1991_s <- excel_diff_man_1991 %>%
+  dplyr::mutate(normal_1991_r = as.numeric(normal_1991_r), normal_1991t2020_sb = as.numeric(normal_1991t2020_sb),
+                STATIONID = as.character(STATIONID),
+                date = as.character(date)) %>%
+  dplyr::select("STATIONID", "date", normal_1991_r, normal_1991t2020_sb)
+
+excel_diff_man_1981_s <- excel_diff_man_1981 %>%
+  dplyr::mutate(normal_1981_r = as.numeric(normal_1981_r), normal_1981t2010_sb = as.numeric(normal_1981t2010_sb),
+                STATIONID = as.character(STATIONID),
+                date = as.character(date)) %>%
+  dplyr::select("STATIONID", "date", normal_1981_r, normal_1981t2010_sb)
+
+diff_man_all <- full_join(excel_diff_man_1981_s, excel_diff_man_1991_s, by = c("STATIONID",  "date")) %>%
+  dplyr::arrange(STATIONID, date) %>%
+  dplyr::mutate(diff_1981sb_1991sb = normal_1981t2010_sb - normal_1991t2020_sb) %>%
+  dplyr::mutate(diff_1981sb_1991r = normal_1981t2010_sb - normal_1991_r) %>%
+  dplyr::mutate(diff_1981r_1991r = normal_1981_r - normal_1991_r) %>%
+  dplyr::mutate(diff_1981r_1991sb = normal_1981_r - normal_1991t2020_sb) 
+
+diff_man_all_melt <- reshape2::melt(diff_man_all %>% dplyr::select("STATIONID", "date", 
+                                                                   diff_1981sb_1991sb, diff_1981sb_1991r, 
+                                                                   diff_1981r_1991r, diff_1981r_1991sb), 
+                                    id = c("STATIONID", "date")) %>%
+  dplyr::mutate(date_dmy = as.Date(paste0("2020", date), format = "%Y%b%d")) %>%
+  dplyr::arrange(date_dmy) %>%
+  dplyr::filter(!is.na(value))
+
+# Plot the difference betwen the previously used nomrals and the 1991 excel and R normals
+
+ggplot(diff_man_all_melt, aes(x = date, y = value, fill = variable)) +
+  geom_boxplot() + 
+  ylab("Difference in SWE (mm)") +
+  ggtitle("Difference Between 1981-2010 Normals to 1991-20120 Normals - Manual Sites")
+
+```
+A full table of normals for manual sites is available within the appendix.
+
+# References
+
+USDA and National Water and Climate Center: 30 Year Climatic and Hydrologic Normals
+https://www.wcc.nrcs.usda.gov/normals/30year_normals_data.htm
+
+Normal ratio method:
+https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/met.1699
+
+World Meteorological Organization - Climatological Normals
+https://community.wmo.int/wmo-climatological-normals
+
+# Appendices - Data tables
+
+## ASWE Normals
+
+The table below shows normals for previous snow bulletin (1981-2010), current snow bulletin (1991-2020), and normals for both periods calculated through the R process outlined above (for 1981-2010 and 1991-2020).
+
+```{r table_excelr1981, echo = FALSE, results = 'asis', message=FALSE, warning=FALSE, error=FALSE}
+
+# Table of the sites and dates that have difference between excel and R process greater than 20 mm of SWE for 1981
+table_1 <- kable(excel_diff_all %>% 
+                   dplyr::select(STATIONID, date, 
+                                 normal_1981t2010, normal_1981t2010_r,
+                                 normal_1991t2020_excel, normal_1991t2020_r
+                                 ) %>%
+                   dplyr::filter(!is.na(STATIONID)) %>%
+                   dplyr::rename(`Normal 1981 to 2010 R` = normal_1981t2010_r,
+                                 `Normal 1981 to 2010 SB` = normal_1981t2010,
+                                 `Normal 1991 to 2020 R` = normal_1991t2020_r,
+                                 `Normal 1991 to 2020 SB` = normal_1991t2020_excel,
+                                 `Station ID` = STATIONID,
+                                 `Survey Period` = date) %>%
+                   dplyr::arrange(`Station ID`, `Survey Period`)) %>%
+  kable_styling(latex_options = "striped")
+
+print(table_1)
+```
+
+
+## Manual Normals
+
+The table below contains manual normals calculated for the snow bulletin and through the above R process (for both 1981-2010 and 1991-2020).
+
+```{r table_maual, echo = FALSE, results = 'asis', message=FALSE, warning=FALSE, error=FALSE}
+
+# Table of the sites and dates that have difference between excel and R process greater than 20 mm of SWE for 1991
+kable(diff_man_all %>% 
+        dplyr::arrange(STATIONID, date) %>% 
+        dplyr::select(STATIONID, date, 
+                      normal_1981_r, normal_1981t2010_sb,
+                      normal_1991_r, normal_1991t2020_sb) %>%
+        dplyr::filter(!is.na(STATIONID)) %>%
+        dplyr::mutate(normal_1981_r = round(normal_1981_r, digits = 0),
+                      normal_1991_r = round(normal_1991_r, digits = 0)) %>%
+        dplyr::rename(`Station ID` = STATIONID,
+                      `Survey Period` = date,
+                      `Normal 1981 to 2010 R` = normal_1981_r,
+                      `Normal 1981 to 2010 SB` = normal_1981t2010_sb,
+                      `Normal 1991 to 2020 R` = normal_1991_r,
+                      `Normal 1991 to 2020 SB` = normal_1991t2020_sb)) %>%
+  kable_styling(latex_options = "striped")
+```
