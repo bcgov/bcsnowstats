@@ -1,5 +1,5 @@
 # Function for calculating basin averaged SWE
-# Used for plotting teh basin averaged SWE - both interactive and the static plots
+# Used for plotting the basin averaged SWE - both interactive and the static plots
 
 # ================================
 # Function for retrieving the basin data for the sites you specify - to be used internally
