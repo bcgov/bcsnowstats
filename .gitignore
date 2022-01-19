@@ -2,3 +2,4 @@
 inst/doc
 bcsnowstats_testing.R
 bcsnowstats.Rproj
+.Rbuildignore
