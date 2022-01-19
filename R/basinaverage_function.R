@@ -1,10 +1,23 @@
-# Function for calculating basin averaged SWE
-# Used for plotting the basin averaged SWE - both interactive and the static plots
+# Copyright 2022 Province of British Columbia
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and limitations under the License.
+# ---------------
 
-# ================================
-# Function for retrieving the basin data for the sites you specify - to be used internally
-# ================================
-basin_sites <- function(site_input, ...){
+#' Function for calculating basin averaged SWE
+#' Used for plotting the basin averaged SWE - both interactive and the static plots
+#' @param site_input site that you want to get data for
+#' @export
+#' @keywords internal
+#' @examples \dontrun{}
+basin_sites <- function(site_input, ...) {
   # Get data
   test_1 <- bcsnowdata::get_aswe_databc(station_id = site_input,
                             get_year = "All",
