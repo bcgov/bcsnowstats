@@ -32,9 +32,8 @@ aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal
   # Get data for the station in order to calculate statistics
   df_tmp_raw <- bcsnowdata::get_aswe_databc(station_id = stations,
                                             get_year = "All",
-                                            parameter_id = "SWE",
-                                            force = FALSE,
-                                            ask = FALSE
+                                            parameter = "swe",
+                                            timestep = "daily"
                                             )
   # ===========
   # Preprocessing
@@ -46,15 +45,15 @@ aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal
   # get the mean SWE by day, rather than choosing just the 14:00 measurement
   # ==
   df_tmp_1 <- df_tmp_raw %>%
-    dplyr::group_by(station_id, wr) %>%
+    #dplyr::group_by(station_id, wr) %>%
     #dplyr::filter(lubridate::hour(Date_UTC) == 16 | lubridate::hour(Date_UTC) == 15 |lubridate::hour(Date_UTC) == 14 | lubridate::hour(Date_UTC) == 17) %>% # get only 16:00 or 15:00 daily measurement.
     dplyr::mutate(m_d = format.Date(date_utc, "%m-%d"))  %>%
     dplyr::mutate(date_dmy = as.Date(date_utc, format = "%Y-%m-%d")) %>%
-    dplyr::group_by(station_id, date_dmy) %>%
-    dplyr::mutate(mean_day = mean(value, na.rm = TRUE)) %>%
-    dplyr::distinct(date_dmy, .keep_all = TRUE) %>% # isolate measurement by day
-    dplyr::ungroup() %>%
-    dplyr::group_by(m_d) # group by the mean daily SWE
+    #dplyr::group_by(station_id, date_dmy) %>%
+    dplyr::mutate(mean_day = value) #%>%
+    #dplyr::distinct(date_dmy, .keep_all = TRUE) %>% # isolate measurement by day
+    #dplyr::ungroup() %>%
+    #dplyr::group_by(m_d) # group by the mean daily SWE
 
   # ========================
   # Fill in any missing data that should be zero
