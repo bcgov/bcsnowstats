@@ -83,7 +83,7 @@ aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal
   # ===========
   if (dim(df_stat)[1] > 1) {
 
-    df_tmp_2 <- dplyr::full_join(df_stat_fill, df_stat, by = c("station_id", "m_d"))
+    df_tmp_2 <- dplyr::full_join(df_stat_fill, df_stat, by = c("id", "m_d"))
 
     #Select the user defined time interval
     if (survey_period == "latest") {
@@ -119,18 +119,18 @@ aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal
       dplyr::filter(!is.na(mean_day)) %>%
       #dplyr::mutate(prctile = round(ecdf(mean_day)(mean_day)*100, digits = 2)) %>%
       #dplyr::mutate(prctile = round(percent_rank(mean_day)*100, digits = 2)) %>% # try calculating the percentile for a month-day across all years by percent_rank
-      dplyr::arrange(station_id, date_utc)
+      dplyr::arrange(id, date_utc)
 
     # Calculate the percentile by day - historic SWE in the dataframe
     if (dim(latest_stats_day)[1] >= 1) { # make sure there is data within the data frame
 
       #if(!is.null(latest_stats_day$historic_SWE[[1]]) && unique(latest_stats_day$NumberofYears) >5) { # run ecdf if there is sufficient historic data: > 5 years?
       latest_stats_2 <- latest_stats_day %>%
-        dplyr::group_by(station_id, date_utc) %>%
+        dplyr::group_by(id, date_utc) %>%
         dplyr::mutate(percentile = ifelse(unique(numberofyears, na.rm = TRUE) > 5,
                                           round(purrr::map2_dbl(historic_swe, value, ~ecdf(.x$mean_SWE)(.y)) * 100, digits = 2), NA)) %>%
         dplyr::select(-historic_swe) %>%
-        dplyr::arrange(station_id, date_utc)
+        dplyr::arrange(id, date_utc)
 
       # Return rank of current value
       #latest_stats_2$current_rank_min <- lapply(rank(as.numeric(c(paste0(unlist(latest_stats_day$historic_SWE)), latest_stats_day$value)))[length(c(paste0(unlist(latest_stats_day$historic_SWE)), latest_stats_day$value))]
@@ -150,12 +150,12 @@ aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal
 
     } else {
       latest_stats_2 <- latest_stats_day %>%
-        dplyr::group_by(station_id, m_d) %>%
+        dplyr::group_by(id, m_d) %>%
         dplyr::mutate(percentile = NA) %>%
         dplyr::mutate(current_rank_min = NA, current_rank_max = NA) %>%
         dplyr::mutate(daystopeak_mean = NA, daystopeak_median = NA) %>%
         dplyr::select(-historic_swe) %>%
-        dplyr::arrange(station_id, date_utc)
+        dplyr::arrange(id, date_utc)
     }
 
   } else { # if there is no statistics available for the site in question
@@ -165,7 +165,7 @@ aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal
   # If there is no data within the dataframe
   if (dim(latest_stats_2)[1] < 1) {
     entry <- t(data.frame(c(as.character(stations), survey_period)))
-    colnames(entry) <- c("station_id", "m_d")
+    colnames(entry) <- c("id", "m_d")
     latest_stats_3 <- dplyr::bind_rows(latest_stats_2, as.data.frame(entry))
   } else {
     latest_stats_3 <- latest_stats_2
