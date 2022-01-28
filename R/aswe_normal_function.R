@@ -166,7 +166,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
   if (length(all_swe$numberofyears_estimated_80) > 0 && unique(all_swe$numberofyears_estimated_80) >= 20 && unique(all_swe$numberofyears_estimated_80) <= 30) {
 
     all_swe_1 <- all_swe %>%
-      dplyr::group_by(station_id, m_d) %>%
+      dplyr::group_by(id, m_d) %>%
       dplyr::filter(!is.na(swe_fornormal))
 
     # Calculate the normal statistics for each day of the year
@@ -181,7 +181,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
                                dplyr::summarise(all_swe_1, normal_Q90 = quantile(swe_fornormal, 0.90, na.rm = TRUE), .groups = "keep"),
                                dplyr::summarise(all_swe_1, normal_maximum = max(swe_fornormal, na.rm = TRUE), .groups = "keep"))) %>%
       dplyr::select(-m_d.1, -m_d.2, -m_d.3, -m_d.4, -m_d.5, -m_d.6, -m_d.7, -m_d.8) %>%
-      dplyr::select(-station_id.1, -station_id.2, -station_id.3, -station_id.4, -station_id.5, -station_id.6, -station_id.7, -station_id.8) %>%
+      dplyr::select(-id.1, -id.2, -id.3, -id.4, -id.5, -id.6, -id.7, -id.8) %>%
       #dplyr::mutate(Data_Range_normal = (paste0(round(normal_minimum, digits = 0), ' to ', round(normal_maximum, digits = 0)))) %>%
       dplyr::mutate(data_range_normal = (paste0(min(lubridate::year(all_swe$date_utc), na.rm = TRUE), " to ", max(lubridate::year(all_swe$date_utc), na.rm = TRUE)))) %>%
       dplyr::mutate(normal_datarange_estimated = unique(all_swe$numberofyears_estimated_80, na.rm = TRUE)[!is.na(unique(all_swe$numberofyears_estimated_80, na.rm = TRUE))]) %>%
@@ -189,27 +189,27 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
 
     # get the day of the max and min!! Use only 'real', non estimated data
     min_date <- all_swe %>%
-      dplyr::group_by(station_id, m_d) %>%
+      dplyr::group_by(id, m_d) %>%
       dplyr::slice(which.min(values_stats)) %>%
-      dplyr::select(date_utc, station_id, m_d) %>%
+      dplyr::select(date_utc, id, m_d) %>%
       dplyr::rename(date_min_normal_utc = date_utc)
 
     max_date <- all_swe %>%
-      dplyr::group_by(station_id, m_d) %>%
+      dplyr::group_by(id, m_d) %>%
       dplyr::slice(which.max(values_stats)) %>%
-      dplyr::select(date_utc, station_id, m_d) %>%
+      dplyr::select(date_utc, id, m_d) %>%
       dplyr::rename(date_max_normal_utc = date_utc)
 
     # append to data
-    dates <- dplyr::full_join(min_date, max_date, by = c("station_id", "m_d"))
-    df_normals_out <- dplyr::full_join(df_normals, dates, by = c("station_id", "m_d")) %>%
+    dates <- dplyr::full_join(min_date, max_date, by = c("id", "m_d"))
+    df_normals_out <- dplyr::full_join(df_normals, dates, by = c("id", "m_d")) %>%
       dplyr::mutate(initial_normal_range = paste0(normal_min, " to ", normal_max))
 
     # Smooth all the statistics by the 5 -day average?
 
     # If there is less than 10 years of data available even after trying adjacent sites, return
   } else {
-    df_normals_out <- data.frame("station_id"  = unique(data$station_id),
+    df_normals_out <- data.frame("id"  = unique(data$station_id),
                                  "m_d" = NA,
                                  "normal_minimum" = NA,
                                  "normal_swe_mean" = NA,
