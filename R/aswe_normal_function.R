@@ -209,7 +209,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
 
     # If there is less than 10 years of data available even after trying adjacent sites, return
   } else {
-    df_normals_out <- data.frame("id"  = unique(data$station_id),
+    df_normals_out <- data.frame("id"  = unique(data$id),
                                  "m_d" = NA,
                                  "normal_minimum" = NA,
                                  "normal_swe_mean" = NA,
