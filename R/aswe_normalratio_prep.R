@@ -38,14 +38,14 @@ aswe_normalratio <- function(data_soi, stations_adj, data_id, normal_max, normal
    dplyr::mutate(date = as.Date(paste0("2020-", m_d))) %>%
    dplyr::mutate(mean_swe_day_7 = zoo::rollmean(mean_swe_day, k = 7, na.pad = TRUE, align = c("center"))) %>% # Apply 7 day smoothing to data
    dplyr::mutate(mean_swe_day_7 = ifelse(is.na(mean_swe_day_7), mean_swe_day, mean_swe_day_7)) %>% # Get rid of leading NA values
-   dplyr::mutate(station_id = unique(data_soi$station_id))
+   dplyr::mutate(id = unique(data_soi$id))
 
   # Fill any missing data using interpolation
   data_soi_m$mean_swe_day_7_fill <- zoo::na.approx(data_soi_m$mean_swe_day_7, na.rm = T, maxgap = 7) # Fill any gaps with linear interpolation
 
   # ------------------------------------------------------
   # Calculate the estimated SWE using the ratio normal method (for mean SWE for each day)
-  ratio_all <- lapply(stations_adj, ratio_function,
+  ratio_all <- lapply(stations_adj[5], ratio_function,
                     data_station_oi = data_soi_m,
                     data_id, normal_max, normal_min)
 
@@ -57,7 +57,7 @@ aswe_normalratio <- function(data_soi, stations_adj, data_id, normal_max, normal
    # Unfold the estimated data from the adjacent stations
    estimated_unmelted <- ratio_all_unfold %>%
      dplyr::filter(!is.na(estimated_swe)) %>%
-     tidyr::spread(station_id, estimated_swe)
+     tidyr::spread(id, estimated_swe)
 
    if ("NA" %in% colnames(estimated_unmelted)) {
       estimated_unmelted <- estimated_unmelted %>%
@@ -80,7 +80,7 @@ aswe_normalratio <- function(data_soi, stations_adj, data_id, normal_max, normal
 
    all_swe_ratio <- all_swe_ratio %>%
      dplyr::mutate(swe_fornormal = swe_est_7) %>% # make a new column that clearly shows the data to use for normal calculation
-     dplyr::mutate(station_id = unique(data_soi$station_id, na.rm = TRUE)) %>%
+     dplyr::mutate(id = unique(data_soi$id, na.rm = TRUE)) %>%
      dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
      dplyr::mutate(m_d = format.Date(date_utc, "%m-%d"))
 

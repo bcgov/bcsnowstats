@@ -38,19 +38,27 @@ data_massage <- function(data) {
   }
 
   # Detect whether the data is hourly or daily. If it is hourly, take the daily average
-  data_mean <- data %>%
-    dplyr::group_by(station_id) %>%
-    dplyr::mutate(date_only = as.Date(date_utc)) %>%
-    dplyr::mutate(timestep = c(0, diff(date_only))) %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(station_id, date_only) %>%
-    dplyr::summarize(swe_mean = mean(value, na.rm = TRUE), .groups = 'keep') %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(m_d = format.Date(date_only, "%m-%d")) %>% # add in m_d vector
-    dplyr::mutate(wr = bcsnowdata::wtr_yr(dates = date_only)) %>%
-    dplyr::rename(date_utc = date_only) %>%
-    dplyr::mutate(station_id = unique(data_original_function$station_id, na.rm = TRUE)[1]) %>%
-    dplyr::mutate(variable = unique(data_original_function$variable, na.rm = TRUE)[1]) %>%
-    dplyr::mutate(station_name = unique(data_original_function$station_name, na.rm = TRUE)[1])
+  # Calculate lag
+  data$lag <- as.numeric(data$date_utc - lag(data$date_utc), units = "hours")
 
+  if (any((data$lag == 24))) {
+    data_mean <- data %>%
+      dplyr::select(-lag)
+  } else {
+    data_mean <- data %>%
+      dplyr::group_by(id) %>%
+      dplyr::mutate(date_only = as.Date(date_utc)) %>%
+      dplyr::mutate(timestep = c(0, diff(date_only))) %>%
+      dplyr::ungroup() %>%
+      dplyr::group_by(id, date_only) %>%
+      dplyr::summarize(swe_mean = mean(value, na.rm = TRUE), .groups = 'keep') %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(m_d = format.Date(date_only, "%m-%d")) %>% # add in m_d vector
+      dplyr::mutate(wr = bcsnowdata::wtr_yr(dates = date_only)) %>%
+      dplyr::rename(date_utc = date_only) %>%
+      dplyr::mutate(id = unique(data_original_function$id, na.rm = TRUE)[1]) %>%
+      dplyr::mutate(variable = unique(data_original_function$variable, na.rm = TRUE)[1]) %>%
+      dplyr::mutate(station_name = unique(data_original_function$station_name, na.rm = TRUE)[1]) %>%
+      dplyr::select(-lag)
+  }
 }

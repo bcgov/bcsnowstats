@@ -45,7 +45,7 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
     data_norm <- data
   }
 
-  id <- unique(data_norm$station_id)
+  id <- unique(data_norm$id)
 
   if (dim(data_norm)[1] == 0) {
       df_normals_out <- data.frame(station_id = character())

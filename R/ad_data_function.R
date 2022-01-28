@@ -20,15 +20,13 @@
 #' @keywords internal
 #' @examples \dontrun{}
 
-
 ad_data <- function(station, normal_max, normal_min, data_id) {
 
   # Retrieve data for the adjacent station
   ad_st <- bcsnowdata::get_aswe_databc(station_id = station,
                                      get_year = "All",
-                                     parameter_id = c("SWE"),
-                                     force = FALSE,
-                                     ask = FALSE
+                                     parameter = "swe",
+                                     timestep = "daily"
   )
 
   # If there is no data, assign the data
@@ -42,7 +40,7 @@ ad_data <- function(station, normal_max, normal_min, data_id) {
     # Format station data and filter for normal time period and 80% yearly data coverage
     ad_data <- data_massage(data = ad_st) %>% # add columns and water year
       dplyr::filter(wr <= normal_max, wr >= normal_min) %>% # Filter by the normal dates that you specify
-      dplyr::group_by(station_id) %>%
+      dplyr::group_by(id) %>%
       dplyr::rename(values_stats_ad = all_of(data_id)) %>%
       dplyr::filter(!is.na(values_stats_ad)) %>% # filter out missing data
       dplyr::ungroup() %>%

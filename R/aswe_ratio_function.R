@@ -103,7 +103,7 @@ ratio_function <- function(station, data_station_oi, data_id, normal_max, normal
       dplyr::select(date_utc, estimated_swe) %>%
       dplyr::mutate(date_utc = as.Date(date_utc)) %>%
       dplyr::mutate(estimated_swe = as.numeric(estimated_swe)) %>%
-      dplyr::mutate(station_id = unique(station))
+      dplyr::mutate(id = unique(station))
   }
 
   return(est_swe)

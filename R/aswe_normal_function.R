@@ -29,7 +29,7 @@ aswe_normal <- function(data, normal_max, normal_min, data_id, ask = FALSE, forc
   # Check cached data to see if the normals have already been calculated for the day of interest
 
   # Check to ensure that the ASWE archived data has been cached on the user's computer and is up to date
-  fname <- paste0(unique(data$station_id), "_norm_archive.rds")
+  fname <- paste0(unique(data$id), "_norm_archive.rds")
   dir <- data_dir()
   fpath <- file.path(dir, fname)
 
@@ -97,7 +97,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
   # Filter the data by the normal span that you specify
   df_normal_time <- data_m %>%
     dplyr::filter(wr <= normal_max, wr >= normal_min) %>% # Filter by the normal dates that you specify
-    dplyr::group_by(station_id, m_d) %>%
+    dplyr::group_by(id, m_d) %>%
     dplyr::rename(values_stats = all_of(data_id))
 
   # ++++++++++++++++++++++ thresholds
