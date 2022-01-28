@@ -31,7 +31,7 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
   # if the user input data as a station name (i.e., the function is being used as a stand alone function), get the data for the station
   if (all(data %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) {
     data_norm <- bcsnowdata::get_aswe_databc(
-      id = data,
+      station_id = data,
       get_year = "All",
       parameter = "swe",
       timestep = "daily"
