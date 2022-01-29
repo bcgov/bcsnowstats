@@ -83,8 +83,8 @@ getSWE_all <- function(data){
    d_all <- dplyr::full_join(data_plot_2_NA, data_stats, by = "d_m") %>%
       dplyr::mutate(Percent_normal = round(daily_mean/normal_Q50 *100, digits = 0))
 
-   # find when Data_UTC is NA
-   uniques <- d_all[!is.na(d_all$date_utc),]
+   # find last date of data
+   uniques <- d_all[!is.na(d_all$daily_mean),]
    na.authId <- which(is.na(d_all$date_utc))
    na.sessionId <- d_all$d_m[na.authId]
    year_last <- lubridate::year(d_all$date_utc[min(na.authId)-1])
@@ -168,8 +168,7 @@ plot_interactive_aswe <- function (path, id, save = "No") {
  data_plot_1 <- get_swe(id)
 
  # Get station name
- station_namei <- unique(data_plot_1$station_name)
- station_name <- station_namei[!is.na(station_namei)][1] #Isolate only the name
+ station_name <- bcsnowdata::snow_auto_location()$LOCATION_NAME[snow_auto_location()$LOCATION_ID %in% as.character(id)]
 
  # Only run the analysis if there is any data available for the site!
  if (dim(data_plot_1)[1] > 1) {
@@ -818,9 +817,8 @@ plot_interactive_aswe <- function (path, id, save = "No") {
   # Add in the density for today
   snow_depth <- bcsnowdata::get_aswe_databc(station_id = id,
                                get_year = "All",
-                               parameter_id = "Snow_Depth",
-                               force = FALSE,
-                               ask = FALSE) %>%
+                               parameter = "snow_depth",
+                               timestep = "daily") %>%
     dplyr::rename(SnowDepth_cm = value) %>%
     dplyr::select(date_utc, SnowDepth_cm, station_id) %>%
     dplyr::rename(id = station_id) %>%
