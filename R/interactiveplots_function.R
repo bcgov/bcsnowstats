@@ -483,7 +483,7 @@ plot_interactive_aswe <- function (path, id, save = "No") {
   # Typical Percent of median peak for this date
   typical_percentnorm <- round(norm_q50$value_5[na.omit(norm_q50$date_utc == Sys.Date())] / max(norm_q50$value_5, na.rm = TRUE)*100, digits = 0)
   typical_percentnorm <- paste0(typical_percentnorm, "%")
-  } else if (all(is.na(data_plot_1$Normal_Q50))){
+  } else if (all(is.null(data_plot_1$Normal_Q50))){
 
   norm_q50 <- subset(d_all_stats, variable == "Normal (1981-2010)")
   date_max <- "Insufficient data"
@@ -502,10 +502,7 @@ plot_interactive_aswe <- function (path, id, save = "No") {
 
  # Elevation
  el_site <- data.frame(elevation()) %>%
-   dplyr::rename(station_id = Station_ID) %>%
-   dplyr::select(station_id, Elevation, Name) %>%
-   dplyr::arrange(station_id) %>%
-   dplyr::filter(station_id %in% id) %>%
+   dplyr::filter(Station_ID %in% id) %>%
    dplyr::select(Elevation)
  el_site <- as.character(el_site)
 
@@ -518,11 +515,9 @@ plot_interactive_aswe <- function (path, id, save = "No") {
 
  # Owned by
  meta_select <- meta %>%
-   dplyr::select("ID", "OWNER") %>%
-   dplyr::rename("station_id" = "ID", "Owner" = "OWNER") %>%
-   dplyr::filter(station_id == id)
+   dplyr::filter(ID == id)
 
- owned_by <- as.character(meta_select$Owner[1])
+ owned_by <- as.character(meta_select$OWNER[1])
 
  # ======================
  # get the increase in SWE from today's date to the max. Based on previous monthly change in SWE statistics
@@ -820,33 +815,27 @@ plot_interactive_aswe <- function (path, id, save = "No") {
                                parameter = "snow_depth",
                                timestep = "daily") %>%
     dplyr::rename(SnowDepth_cm = value) %>%
-    dplyr::select(date_utc, SnowDepth_cm, station_id) %>%
-    dplyr::rename(id = station_id) %>%
-    dplyr::mutate(date_d_m_y = as.Date(date_utc)) %>%
-    dplyr::group_by(date_d_m_y) %>%
-    dplyr::mutate(SnowDepth_cm_meanday = mean(SnowDepth_cm, na.rm = TRUE)) %>%
-    dplyr::filter(date_d_m_y == Sys.Date()) %>%# choose today's data
-    dplyr::distinct(SnowDepth_cm_meanday, .keep_all = TRUE) %>%
-    dplyr::ungroup() %>%
-    dplyr::select(date_utc, SnowDepth_cm_meanday, id)
+    dplyr::select(date_utc, SnowDepth_cm, id) %>%
+    dplyr::filter(date_utc == Sys.Date()) %>%# choose today's data
+    dplyr::distinct(SnowDepth_cm, .keep_all = TRUE)
 
   # Calculate density
-   stats_out <- dplyr::full_join(stats_out_2, snow_depth, by = "id") %>%
-     dplyr::mutate(swe_mm = as.numeric(as.character(SWE_today))) %>%
-     dplyr::mutate(SWE_cm = swe_mm / 10) %>%
-     dplyr::mutate(density_cmcm = round(SWE_cm / SnowDepth_cm_meanday, digits = 2)) %>%
-     dplyr::mutate(density_cmcm = replace(density_cmcm, density_cmcm >1.0, ">1.0")) %>%
-     # Add in the post-peak SWE statistics
-     dplyr::mutate(percentSWE_remaining = percent_SWE_remaining) %>%
-     dplyr::mutate(percentpeak_vsnorm = percentpeak_vs_norm) %>%
-     dplyr::mutate(percentpeak_vsmedian = percentpeak_vs_median)
+  stats_out <- dplyr::full_join(stats_out_2, snow_depth, by = "id") %>%
+    dplyr::mutate(swe_mm = as.numeric(as.character(SWE_today))) %>%
+    dplyr::mutate(SWE_cm = swe_mm / 10) %>%
+    dplyr::mutate(density_cmcm = round(SWE_cm / SnowDepth_cm, digits = 2)) %>%
+    dplyr::mutate(density_cmcm = replace(density_cmcm, density_cmcm >1.0, ">1.0")) %>%
+    # Add in the post-peak SWE statistics
+    dplyr::mutate(percentSWE_remaining = percent_SWE_remaining) %>%
+    dplyr::mutate(percentpeak_vsnorm = percentpeak_vs_norm) %>%
+    dplyr::mutate(percentpeak_vsmedian = percentpeak_vs_median)
  }
 
  # Save statistics csv file
- if (save == "Yes") {
-   stats_path <- gsub("Interactive_plots/", "", path)
-   write.csv(stats_out, file = paste0(stats_path, "Stats/", id, ".csv"), row.names = FALSE)
- }
+ #if (save == "Yes") {
+#   stats_path <- gsub("Interactive_plots/", "", path)
+#   write.csv(stats_out, file = paste0(stats_path, "Stats/", id, ".csv"), row.names = FALSE)
+# }
 
  return(list("SWEplot" = p, "stats" = stats_out))
  } else {
@@ -1055,7 +1044,7 @@ plot_interactive_manual <- function(id, path, save = "No"){
    # Statistics data
    # =================
    data_statistics <- data_plot_1 %>%
-    dplyr::select(station_id, survey_period, normal_mm, min, swe_mean, Q5, Q10, Q25, Q50, Q75, Q90, max, data_range, numberofyears) %>%
+    dplyr::select(id, survey_period, normal_mm, min, swe_mean, Q5, Q10, Q25, Q50, Q75, Q90, max, data_range, numberofyears) %>%
     dplyr::distinct_all() %>%
     dplyr::mutate(Date = paste0(survey_period, "-", bcsnowdata::wtr_yr(Sys.Date()))) %>%
     dplyr::mutate(Date = as.Date(Date, format = "%d-%b-%Y")) %>%
@@ -1063,7 +1052,7 @@ plot_interactive_manual <- function(id, path, save = "No"){
 
    data_stats_melt <- data_statistics %>%
     dplyr::select(-data_range, -numberofyears, -normal_mm, -survey_period, -swe_mean, -Q5) %>%
-    reshape2::melt(id = c("Date", "station_id")) %>%
+    reshape2::melt(id = c("Date", "id")) %>%
     dplyr::mutate(point_colour = dplyr::case_when(
      variable == "min" ~ colour_p()$colour_hex[2],
      variable == "Q10" ~ colour_p()$colour_hex[2],
