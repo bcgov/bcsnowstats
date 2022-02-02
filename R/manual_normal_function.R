@@ -49,17 +49,17 @@ manual_normal <- function(data) {
   dplyr::ungroup() %>%
   dplyr::group_by(survey_period) %>%
   dplyr::slice(which.min(values_stats)) %>%
-  dplyr::select(date_utc, station_id, survey_period) %>%
+  dplyr::select(date_utc, id, survey_period) %>%
   dplyr::rename(date_min_normal_utc = date_utc)
 
  max_date <- data %>%
   dplyr::ungroup() %>%
   dplyr::group_by(survey_period) %>%
   dplyr::slice(which.max(values_stats)) %>%
-  dplyr::select(date_utc, station_id, survey_period) %>%
+  dplyr::select(date_utc, id, survey_period) %>%
   dplyr::rename(date_max_normal_utc = date_utc)
 
  # append to data
- dates <- dplyr::full_join(min_date, max_date, by = c("station_id", "survey_period"))
+ dates <- dplyr::full_join(min_date, max_date, by = c("id", "survey_period"))
  df_normals_out <- dplyr::full_join(df_normals_y, dates, by = c("survey_period"))
 }
