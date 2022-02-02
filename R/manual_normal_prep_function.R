@@ -40,12 +40,12 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
 
   # Filter the data by the normal span that you specify
   df_time <- data %>%
-    dplyr::filter(wr <= normal_max, wr >= normal_min) %>% # Filter by the normal dates that you specify
     dplyr::group_by(id, m_d) %>%
     dplyr::rename(values_stats = all_of(data_id))
 
   # Count the number of measurements per survey period - how many observations are present for each of the survey date?
   num_obs <- df_time %>%
+    dplyr::filter(wr <= normal_max, wr >= normal_min) %>% # Filter by the normal dates that you specify
     dplyr::filter(!is.na(values_stats)) %>%
     dplyr::group_by(survey_period) %>%
     dplyr::mutate(percent_available = length(values_stats) / 30 * 100) %>% # if there is 100% data, should have 30 measurements
@@ -55,6 +55,7 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
 
   # Append to the data as the number of raw data years
   df_normal_time <- dplyr::full_join(df_time, num_obs, by = "survey_period") %>%
+    dplyr::filter(wr <= normal_max, wr >= normal_min) %>% # Filter by the normal dates that you specify
     dplyr::select(-percent_available)
 
   #####################################
@@ -65,10 +66,11 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
 
   if (dim(survey_periods_20)[1] > 1) {
 
-    # Fill in data from adjacent stations using manual_datafill() function
-    all_swe <- manual_datafill(data = df_normal_time, normal_max, normal_min, survey_periods_20, num_obs)
+    # Fill in data from adjacent stations using manual_datafill() function. Only fill for survey periods between 10-20 years of raw data
+    all_swe <- manual_datafill(data = dplyr::full_join(df_time, num_obs, by = "survey_period"),
+                               normal_max, normal_min, survey_periods_20, num_obs)
 
-    # Group by survey data and filter so you ar eonly calculating normals for stations with at least 20 years of raw+ predicted data
+    # Group by survey data and filter so you are only calculating normals for stations with at least 20 years of raw+ predicted data
     all_swe_1 <- all_swe %>%
       dplyr::filter(numberofyears_estimated >= 20) %>%
       dplyr::group_by(survey_period)
@@ -80,10 +82,10 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
     survey_l20 <- all_swe %>%
       dplyr::ungroup() %>%
       dplyr::filter(numberofyears_estimated < 20) %>%
-      dplyr::select(survey_period, numberofyears_estimated, numberofyears_raw) %>%
+      dplyr::select(survey_period, numberofyears_estimated, numberofyears_raw, id) %>%
       unique()
 
-    df_normals_10t20 <- dplyr::full_join(df_normals_filled, survey_l20, by = c("survey_period", "numberofyears_estimated", "numberofyears_raw"))
+    df_normals_10t20 <- dplyr::full_join(df_normals_filled, survey_l20, by = c("survey_period", "numberofyears_estimated", "numberofyears_raw", "id"))
 
   } else{
     df_normals_10t20 <- data.frame(id = df_normal_time$id)
@@ -138,7 +140,7 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
     # Calculate the normal statistics for each day of the year with manual_normal function
     df_normals_20t30 <- manual_normal(data = all_swe_1)
   } else {
-    df_normals_20t30 <- data.frame(id = df_normal_time$id)
+    df_normals_20t30 <- data.frame(id = unique(df_normal_time$id))
   }
 
   # Join all together
@@ -147,5 +149,4 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
 
   df_all <- dplyr::full_join(df_10t30, df_normals_10) %>%
     unique()
-
 }
