@@ -36,16 +36,14 @@ stats_MSWE <- function(station_id, survey_period,
                        normal_min, normal_max,
                        incorrect_sites = NA, incorrect_data = NA) {
 
-  #Retrieve data for the stations. Don't use caching
+  # Retrieve data for the stations. Don't use caching
   manual_snow <- bcsnowdata::get_manual_swe(station_id = station_id,
                                             survey_period = "All",
-                                            get_year = "All",
-                                            force = FALSE,
-                                            ask = FALSE)
+                                            get_year = "All")
 
   # If the input is All, get the list of stations from the data you just retrieved
   if (station_id[1] == "All") {
-    stations <- unique(manual_snow$station_id)
+    stations <- unique(manual_snow$id)
   } else {
     stations <- unique(station_id)
   }
@@ -76,7 +74,7 @@ stats_MSWE <- function(station_id, survey_period,
   # Replace any missing/incorrect data; manually correct any sites that have incorrect SWE data
   if (any(!is.na(incorrect_sites))) {
     for (f in 1:length(incorrect_sites)) {
-      manual_snow$swe_mm[manual_snow$station_id %in% incorrect_sites[f] & manual_snow$survey_period %in% survey_period & lubridate::year(as.Date(manual_snow$date_utc)) %in% get_year] <- incorrect_data[f]
+      manual_snow$swe_mm[manual_snow$id %in% incorrect_sites[f] & manual_snow$survey_period %in% survey_period & lubridate::year(as.Date(manual_snow$date_utc)) %in% get_year] <- incorrect_data[f]
     }
   }
 
@@ -91,7 +89,7 @@ stats_MSWE <- function(station_id, survey_period,
   df_final_1 <- do.call(dplyr::bind_rows, list_stats)
 
   # create an empty row for stations that did not return any data for the period specified
-  if (!isTRUE(all.equal(stations, unique(df_final_1$station_id))) | !is.data.frame(df_final_1)) {
+  if (!isTRUE(all.equal(stations, unique(df_final_1$id))) | !is.data.frame(df_final_1)) {
    missing <- tibble::tibble(station_id = stations[!(stations %in% unique(df_final_1$station_id))])
    df_final_2 <- dplyr::bind_rows(df_final_1, missing)
  } else {
