@@ -34,7 +34,7 @@ snow_stats_manual <- function(data, normal_min, normal_max) {
     dplyr::mutate(m_d = format.Date(date_utc, "%m-%d"))  %>%
     dplyr::filter(!is.na(swe_mm)) %>% # filter out missing data
     dplyr::mutate(swe_mm = as.numeric(as.character(swe_mm))) %>%
-    dplyr::group_by(station_id, survey_period)
+    dplyr::group_by(id, survey_period)
 
   # compute historical stats - by survey period
   df_stat <- do.call(data.frame,
@@ -48,34 +48,34 @@ snow_stats_manual <- function(data, normal_min, normal_max) {
                           dplyr::summarise(df_hist, Q90 = quantile(swe_mm,0.90, na.rm = TRUE), .groups = "keep"),
                           dplyr::summarise(df_hist, max = max(swe_mm, na.rm = TRUE), .groups = "keep"))) %>%
     dplyr::select(-survey_period.1, -survey_period.2, -survey_period.3, -survey_period.4, -survey_period.5, -survey_period.6, -survey_period.7, -survey_period.8) %>%
-    dplyr::select(-station_id.1, -station_id.2, -station_id.3, -station_id.4, -station_id.5, -station_id.6, -station_id.7, -station_id.8)
+    dplyr::select(-id.1, -id.2, -id.3, -id.4, -id.5, -id.6, -id.7, -id.8)
 
   df_time <- data %>%
     dplyr::ungroup() %>%
-    dplyr::group_by(station_id) %>%
+    dplyr::group_by(id) %>%
     dplyr::summarize(maxdate = max(date_utc), mindate = min(date_utc), .groups = "keep") %>%
     dplyr::mutate(data_range = (paste0(mindate, " to ", maxdate))) %>%
     dplyr::mutate(numberofyears = lubridate::year(maxdate) - lubridate::year(mindate)) %>%
-    dplyr::select(station_id, data_range, numberofyears)
+    dplyr::select(id, data_range, numberofyears)
 
-  df_stat_date <- dplyr::full_join(df_stat, df_time, by = c("station_id"))
+  df_stat_date <- dplyr::full_join(df_stat, df_time, by = c("id"))
 
   # get the day of the max and min!!
   min_date <- df_hist %>%
-    dplyr::group_by(station_id, survey_period) %>%
+    dplyr::group_by(id, survey_period) %>%
     dplyr::slice(which.min(swe_mm)) %>%
-    dplyr::select(date_utc, station_id, survey_period) %>%
+    dplyr::select(date_utc, id, survey_period) %>%
     dplyr::rename(date_min_utc = date_utc)
 
   max_date <- df_hist %>%
-    dplyr::group_by(station_id, survey_period) %>%
+    dplyr::group_by(id, survey_period) %>%
     dplyr::slice(which.max(swe_mm)) %>%
-    dplyr::select(date_utc, station_id, survey_period) %>%
+    dplyr::select(date_utc, id, survey_period) %>%
     dplyr::rename(date_max_utc = date_utc)
 
   # append to data
-  dates <- dplyr::full_join(min_date, max_date, by = c("survey_period", "station_id"))
-  df_stat_1 <- dplyr::full_join(df_stat_date, dates, by = c("survey_period", "station_id"))
+  dates <- dplyr::full_join(min_date, max_date, by = c("survey_period", "id"))
+  df_stat_1 <- dplyr::full_join(df_stat_date, dates, by = c("survey_period", "id"))
 
   # Calculate the snow normals - 1981 to 2010 (water year)
   df_normals_1 <- SWE_normals(data, normal_max, normal_min)
@@ -85,11 +85,11 @@ snow_stats_manual <- function(data, normal_min, normal_max) {
 
   # append the daily mean SWE to a column so that the percentile can be easily calculated within the SBI function
   df_hist_SWE <- df_hist %>%
-    dplyr::group_by(station_id, survey_period) %>%
-    dplyr::select(survey_period, swe_mm, station_id) %>%
+    dplyr::group_by(id, survey_period) %>%
+    dplyr::select(survey_period, swe_mm, id) %>%
     dplyr::rename(mean_swe = swe_mm) %>%
     tidyr::nest() %>%
-    dplyr::select(station_id, survey_period, data)
+    dplyr::select(id, survey_period, data)
 
   # append to the stats
   df_stats_final <- dplyr::full_join(df_stats_all, df_hist_SWE) %>%
