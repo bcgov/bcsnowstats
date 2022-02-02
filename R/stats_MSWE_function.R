@@ -92,7 +92,7 @@ stats_MSWE <- function(station_id, survey_period,
   if (!isTRUE(all.equal(stations, unique(df_final_1$id))) | !is.data.frame(df_final_1)) {
    missing <- tibble::tibble(station_id = stations[!(stations %in% unique(df_final_1$station_id))])
    df_final_2 <- dplyr::bind_rows(df_final_1, missing)
- } else {
+  } else {
    df_final_2 <- df_final_1
   }
 
