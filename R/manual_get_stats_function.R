@@ -45,7 +45,7 @@ manual_get_stats <- function(data, stations, survey_period, get_year, normal_min
 
   if (dim(df_stat)[1] > 1) {
     # join statistics table with the entire record and calculate percentile for each day
-    df_tmp_2 <- dplyr::full_join(df_tmp_1, df_stat, by = c("station_id", "survey_period"))
+    df_tmp_2 <- dplyr::full_join(df_tmp_1, df_stat, by = c("id", "survey_period"))
 
     #Select the user defined time interval
     if (survey_period == "latest") {
@@ -94,12 +94,12 @@ manual_get_stats <- function(data, stations, survey_period, get_year, normal_min
 
       # Calculate the percentile by day - historic SWE in the dataframe
       latest_stats_2 <- latest_stats_day %>%
-        dplyr::group_by(station_id, survey_period) %>%
+        dplyr::group_by(id, survey_period) %>%
         dplyr::mutate(percentile = ifelse(length(unlist(historic_swe)) > 5,
                                           round(purrr::map2_dbl(historic_swe, swe_mm, ~ecdf(.x$mean_swe)(.y)) * 100, digits = 2),
                                           NaN)) %>%
         dplyr::select(-historic_swe) %>%
-        dplyr::arrange(station_id, date_utc)
+        dplyr::arrange(id, date_utc)
 
       # Calculate the rank - min and max for POR
       latest_stats_2$current_rank_min <- mapply(rank_min_function, latest_stats_day$historic_swe, latest_stats_day$swe_mm)
@@ -117,7 +117,7 @@ manual_get_stats <- function(data, stations, survey_period, get_year, normal_min
 
   if (dim(latest_stats_2)[1] < 1) {
     entry <- t(data.frame(c(as.character(stations), survey_period)))
-    colnames(entry) <- c("station_id", "survey_period")
+    colnames(entry) <- c("id", "survey_period")
 
     latest_stats_3 <- dplyr::bind_rows(latest_stats_2, as.data.frame(entry))
   } else {
