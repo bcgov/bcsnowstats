@@ -28,13 +28,13 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
 
  # Use adjacent stations to fill in missing data to bring number of years to 20-30
  location_station <- bcsnowdata::snow_manual_location() %>%
-  dplyr::filter(LOCATION_ID %in% unique(data$station_id))
+    dplyr::filter(LOCATION_ID %in% unique(data$id))
  location_station <- sf::st_as_sf(location_station)
 
  # All other sites within the vicinity
  location_all <- bcsnowdata::snow_manual_location()
  location_all <- sf::st_as_sf(location_all) %>%
-  dplyr::filter(!(LOCATION_ID %in% unique(data$station_id)))
+  dplyr::filter(!(LOCATION_ID %in% unique(data$id)))
 
  # 100 km buffer around the site
  fr_buffer <- sf::st_buffer(location_station, dist = 1e5)
@@ -56,38 +56,44 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
 
    # Find those stations that have long term data for the survey dates that have 10-20 years of data
    data_adj <- bcsnowdata::get_manual_swe(
-      station_id = stations_adj,
-      get_year = "All",
-      force = FALSE,
-      ask = FALSE) %>%
-     dplyr::mutate(wr = bcsnowdata::wtr_yr(dates = date_utc)) %>%
-     dplyr::filter(wr <= normal_max & wr >= normal_min) %>% # Filter by the normal dates that you specify
-     # dplyr::filter(Survey_Period %in% survey_periods_20$Survey_Period) %>% # Filter by the survey period that has 10-20 years of data
-     dplyr::group_by(station_id, survey_period) %>%
-    # dplyr::mutate(percent_available = length(swe_mm)/30*100) %>% # if there is 100% data, should have 30 measurements
-     dplyr::mutate(number_of_observations = length(swe_mm)) %>%
-     dplyr::filter(number_of_observations >= 20) # filter only for those sites that have more than 20 years of data for the survey period you need
+          station_id = stations_adj,
+          get_year = "All",
+          survey_period = "All") %>%
+     dplyr::mutate(wr = bcsnowdata::wtr_yr(dates = date_utc))
 
-   # Find the correlation between the station of interest and adjacent stations with
+   stations_adj_20 <- data_adj %>%
+     dplyr::filter(wr <= normal_max & wr >= normal_min) %>% # Filter by the normal dates that you specify
+     #dplyr::filter(survey_period %in% survey_periods_20$survey_period) %>% # Filter by the survey period that has 10-20 years of data
+     dplyr::group_by(id, survey_period) %>%
+     dplyr::mutate(number_of_observations = length(swe_mm)) %>%
+     #dplyr::mutate(percent_available = number_of_observations/(lubridate::year(Sys.Date()) - min(lubridate::year(date_utc))) * 100) %>% # if there is 100% data, should have 30 measurements
+     dplyr::filter(number_of_observations >= 20) # filter for sites that have 20 years of data
+
+   # Find the correlation between the station of interest and adjacent stations with at least 20 years of data within the normal period
    data_adj_select <- data_adj %>%
-     dplyr::select(station_id, survey_period, swe_mm, date_utc, wr) %>%
-     dplyr::rename(swe_adj = swe_mm, station_id_adj = station_id) %>%
+     dplyr::filter(id %in% unique(stations_adj_20$id)) %>%
+     dplyr::select(id, survey_period, swe_mm, date_utc, wr) %>%
+     dplyr::rename(swe_adj = swe_mm, station_id_adj = id) %>%
      dplyr::mutate(survey_period_year = paste0(survey_period, "-", wr))
 
    # If there is data from adjacent sites within the normal range, use it to fill in data.
    if (dim(data_adj_select)[1] > 0) {
-    data_adj_cast <- reshape::cast(data_adj_select, survey_period_year ~ station_id_adj, fun.aggregate = sum, value = c("swe_adj"))
+    data_adj_cast <- reshape::cast(data_adj_select, survey_period_year ~ station_id_adj, fun.aggregate = sum, value = c("swe_adj"), fill = NA_real_) %>%
+      dplyr::mutate(date = as.Date(survey_period_year, format = "%d-%b-%Y")) %>%
+      dplyr::arrange(date)
 
     df_normal_time_select <- data %>%
       dplyr::mutate(survey_period_year = paste0(survey_period, "-", wr)) %>%
-      dplyr::select(station_id, survey_period, values_stats, date_utc, survey_period_year)
+      dplyr::select(id, survey_period, values_stats, date_utc, survey_period_year, wr)
 
     data_all <- dplyr::full_join(df_normal_time_select, data_adj_cast, by = c("survey_period_year")) %>%
       dplyr::ungroup() %>%
-      dplyr::select(-survey_period_year, -m_d, -station_id, -survey_period, -date_utc)
+      dplyr::select(-survey_period_year, -m_d, -id, -survey_period, -date_utc, -date, -wr) %>%
+      dplyr::filter(!is.na(values_stats))  # filter missing values within the station you are looking at (y)
 
     # Use multiple linear regression model to predict the SWE for the station you are looking for
-    lm1 <- lm(values_stats ~ ., data = data_all)
+    lm1 <- lm(values_stats ~ ., data = data_all, na.action = na.omit)
+    #lm1 <- lm(y~.,df)
     #summary(lm1)$coefficients[1]
     #length(summary(lm1)$coefficients[1])
 
@@ -108,6 +114,7 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
 
       # If there are no manual sites within 100 km with data within the normal period significantly coorlated to the station of interes, do not do any data filling
       all_swe_1 <- data %>%
+        dplyr::filter(wr <= normal_max & wr >= normal_min) %>% # Filter by the normal dates that you specify
         dplyr::mutate(numberofyears_estimated = numberofyears_raw) %>%
         dplyr::mutate(swe_fornormal = values_stats)
 
@@ -119,7 +126,14 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
      lm_sig <- lm(values_stats ~ ., data = data_accum_sig)
 
      # Extract estimated coefficients to make model
-     data_all_s <- dplyr::full_join(df_normal_time_select, data_adj_cast[, c("survey_period_year", gsub("[[:punct:]]", "", row.names(cof)))], by = c("survey_period_year")) %>%
+     data_adj_cast_date <- data_adj_cast %>%
+       dplyr::mutate(wr = bcsnowdata::wtr_yr(date)) %>%
+       dplyr::filter(wr <= normal_max & wr >= normal_min) %>%
+       dplyr::select(-wr)
+
+     data_all_s <- dplyr::full_join(df_normal_time_select %>%
+                                      dplyr::filter(wr <= normal_max & wr >= normal_min),  # Filter by the normal dates that you specify
+                                    data_adj_cast_date[, c("survey_period_year", gsub("[[:punct:]]", "", row.names(cof)))], by = c("survey_period_year")) %>%
       dplyr::ungroup() %>%
       dplyr::arrange(survey_period_year) %>%
       dplyr::mutate(survey_period = ifelse(!is.na(survey_period), survey_period, substr(survey_period_year, 1, 6))) %>%
@@ -131,9 +145,10 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
      # fill in data only from the survey periods with 10-20 years of data
      # Get only the survey periods where there is between 10-20 measurements
      incomplete <- data %>%
-      dplyr::filter(survey_period %in% survey_periods_20$survey_period) %>%
-      dplyr::mutate(survey_period_year = paste0(survey_period, "-", wr)) %>%
-      dplyr::arrange(survey_period_year)
+        dplyr::filter(wr <= normal_max & wr >= normal_min) %>%
+        dplyr::filter(survey_period %in% survey_periods_20$survey_period) %>%
+        dplyr::mutate(survey_period_year = paste0(survey_period, "-", wr)) %>%
+        dplyr::arrange(survey_period_year)
 
      # Join with the predicted SWE
      all_swe_p <- dplyr::full_join(incomplete, data_all_s %>% dplyr::select(survey_period_year, predicted), by = "survey_period_year") %>%
@@ -155,7 +170,8 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
 
      # Bind to the dataframe containing the survey periods with sufficient time
      all_swe <- dplyr::full_join(all_swe_p, data %>%
-                          dplyr::filter(!(survey_period %in% survey_periods_20$survey_period))) %>%
+                                   dplyr::filter(wr <= normal_max & wr >= normal_min) %>%
+                                   dplyr::filter(!(survey_period %in% survey_periods_20$survey_period))) %>%
        dplyr::mutate(swe_fornormal = ifelse(!is.na(swe_fornormal), swe_fornormal, values_stats))  # fill in the survey periods that have enough data
 
      # Calculate normal values from the simulated/augmented dataset
@@ -163,12 +179,12 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
      all_swe_1 <- dplyr::full_join(all_swe, num_obs, by = "survey_period") %>%
       #dplyr::rename(numberofyears_raw = number_of_observations) %>%
       dplyr::mutate(numberofyears_raw = ifelse(!is.na(numberofyears_raw.x), numberofyears_raw.x, numberofyears_raw.y)) %>%
-      dplyr::select(-numberofyears_raw.x, -numberofyears_raw.y) %>%
-      dplyr::mutate(numberofyears_estimated = ifelse(!is.na(numberofyears_estimated), numberofyears_estimated, numberofyears_raw)) %>%
-      dplyr::select(-percent_available)
+      dplyr::select(-numberofyears_raw.x, -numberofyears_raw.y) #%>%
+      #dplyr::mutate(numberofyears_estimated = ifelse(!is.na(numberofyears_estimated), numberofyears_estimated, numberofyears_raw)) %>%
+      #dplyr::select(-percent_available)
 
      all_swe_1$snow_course_name <- zoo::na.locf(all_swe_1$snow_course_name, fromLast = TRUE, na.rm = F)
-     all_swe_1$station_id <- zoo::na.locf(all_swe_1$station_id, fromLast = TRUE, na.rm = F)
+     all_swe_1$id <- zoo::na.locf(all_swe_1$id, fromLast = TRUE, na.rm = F)
      all_swe_1$elev_metres <- zoo::na.locf(all_swe_1$elev_metres, fromLast = TRUE, na.rm = F)
     }
 
