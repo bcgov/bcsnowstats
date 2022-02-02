@@ -32,12 +32,12 @@ manual_get_stats <- function(data, stations, survey_period, get_year, normal_min
 
   # Filter the entire manual dataset by the stations you are looking for
   df_tmp <- data %>%
-    dplyr::filter(station_id %in% stations)
+    dplyr::filter(id %in% stations)
 
   df_tmp$wr <- bcsnowdata::wtr_yr(dates = df_tmp$date_utc)
 
   df_tmp_1 <- df_tmp %>%
-    dplyr::group_by(survey_period, station_id) %>%
+    dplyr::group_by(survey_period, id) %>%
     dplyr::filter(!is.na(swe_mm)) # filter out missing data
 
   # Calculate statistics and normals through function for each survey period
