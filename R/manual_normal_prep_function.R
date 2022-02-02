@@ -24,12 +24,12 @@
 manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
 
   # Check to make sure that data has a wr column
-  if ("wr" %in% colnames(data)) {} else {
+  if (!("wr" %in% colnames(data))) {
     data$wr <- bcsnowdata::wtr_yr(dates = data$date_utc)
   }
 
   # Check to make sure there is a m-d column in the data
-  if ("m_d" %in% colnames(data)) {} else {
+  if (!("m_d" %in% colnames(data))) {
     data <- data %>%
       dplyr::mutate(m_d = format.Date(date_utc, "%m-%d"))
   }
@@ -41,7 +41,7 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
   # Filter the data by the normal span that you specify
   df_time <- data %>%
     dplyr::filter(wr <= normal_max, wr >= normal_min) %>% # Filter by the normal dates that you specify
-    dplyr::group_by(station_id, m_d) %>%
+    dplyr::group_by(id, m_d) %>%
     dplyr::rename(values_stats = all_of(data_id))
 
   # Count the number of measurements per survey period - how many observations are present for each of the survey date?
@@ -86,7 +86,7 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
     df_normals_10t20 <- dplyr::full_join(df_normals_filled, survey_l20, by = c("survey_period", "numberofyears_estimated", "numberofyears_raw"))
 
   } else{
-    df_normals_10t20 <- data.frame(station_id = df_normal_time$station_id)
+    df_normals_10t20 <- data.frame(id = df_normal_time$id)
   }
 
   #####################################
@@ -101,7 +101,7 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
     df_normals_10 <- df_normal_time %>%
       dplyr::ungroup() %>%
       dplyr::filter(survey_period %in% survey_periods_10$survey_period) %>%
-      dplyr::select(survey_period, numberofyears_raw, station_id) %>%
+      dplyr::select(survey_period, numberofyears_raw, id) %>%
       unique() %>%
       dplyr::mutate(numberofyears_estimated = numberofyears_raw,
                     normal_minimum = NA,
@@ -118,7 +118,7 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
                     date_max_normal_utc = NA)
 
   } else {
-    df_normals_10 <- data.frame(station_id = unique(df_normal_time$station_id))
+    df_normals_10 <- data.frame(id = unique(df_normal_time$id))
   }
 
   #####################################
@@ -138,7 +138,7 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id) {
     # Calculate the normal statistics for each day of the year with manual_normal function
     df_normals_20t30 <- manual_normal(data = all_swe_1)
   } else {
-    df_normals_20t30 <- data.frame(station_id = df_normal_time$station_id)
+    df_normals_20t30 <- data.frame(id = df_normal_time$id)
   }
 
   # Join all together
