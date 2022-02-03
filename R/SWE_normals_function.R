@@ -54,20 +54,46 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
 
       data_id <- "value"
 
+      # filter data for ASWE sites
+      data_swe <- data_norm %>%
+        dplyr::filter(id %in% bcsnowdata::snow_auto_location()$LOCATION_ID)
+
       # Use the aswe_normal() function to fill in data (if appropriate) and calculate normals (if there is sufficient data)
-      df_normals_out <- aswe_normal(data = data_norm, normal_max, normal_min, data_id, force = force)
+      df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id, force = force)
 
   # If the site is manual site
   } else if (any(id %in% bcsnowdata::snow_manual_location()$LOCATION_ID)) {
 
       data_id <- "swe_mm"
 
-      df_normals_out <- manual_normal_prep(data = data_norm, normal_max = normal_max, normal_min = normal_min, data_id = data_id)
+      # filter data for ASWE sites
+      data_man <- data_norm %>%
+        dplyr::filter(id %in% bcsnowdata::snow_manual_location()$LOCATION_ID)
+
+      df_normals_man <- manual_normal_prep(data = data_man, normal_max = normal_max, normal_min = normal_min, data_id = data_id)
   } else if (id %in% snow_basins()) {
 
      # if you are trying to simply get the normal for the entire basin, take the average across the data
-     df_normals_out <- basin_normal(data = data_norm, normal_max = normal_max, normal_min = normal_min)
+     df_normals_basin <- basin_normal(data = data_norm, normal_max = normal_max, normal_min = normal_min)
 
+  }
+
+  # If there is both aswe and manual, knit together. Otherwise, return the appropriate data
+
+  if (dim(df_normals_aswe)[1] > 0 && dim(df_normals_man)[1] > 0) {
+    df_normals_out <- list(df_normals_aswe, df_normals_man)
+  }
+
+  if (dim(df_normals_aswe)[1] > 0 && dim(df_normals_man)[1] == 0) {
+    df_normals_out <- df_normals_aswe
+  }
+
+  if (dim(df_normals_aswe)[1] == 0 && dim(df_normals_man)[1] > 0) {
+    df_normals_out <- df_normals_man
+  }
+
+  if (dim(df_normals_aswe)[1] == 0 && dim(df_normals_man)[1] == 0) {
+    df_normals_out <- df_normals_basin
   }
 
   # End of function
