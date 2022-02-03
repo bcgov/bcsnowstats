@@ -50,7 +50,7 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
   if (dim(data_norm)[1] == 0) {
       df_normals_out <- data.frame(station_id = character())
 
-  } else if (id %in% bcsnowdata::snow_auto_location()$LOCATION_ID) { # Check to see whether the station is a manual or automated station
+  } else if (any(id %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) { # Check to see whether the station is a manual or automated station
 
       data_id <- "value"
 
@@ -58,7 +58,7 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
       df_normals_out <- aswe_normal(data = data_norm, normal_max, normal_min, data_id, force = force)
 
   # If the site is manual site
-  } else if (id %in% bcsnowdata::snow_manual_location()$LOCATION_ID) {
+  } else if (any(id %in% bcsnowdata::snow_manual_location()$LOCATION_ID)) {
 
       data_id <- "swe_mm"
 
