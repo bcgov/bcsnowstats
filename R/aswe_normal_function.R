@@ -29,12 +29,12 @@ aswe_normal <- function(data, normal_max, normal_min, data_id, ask = FALSE, forc
   # Check cached data to see if the normals have already been calculated for the day of interest
 
   # Check to ensure that the ASWE archived data has been cached on the user's computer and is up to date
-  fname <- paste0(unique(data$id), "_norm_archive.rds")
+  fname <- paste0(unique(data$parameter), "_norm_archive.rds")
   dir <- data_dir()
   fpath <- file.path(dir, fname)
 
   # If the file doesn't exists or the user decides to force the download, calculate the normal data for the station and save it
-  if (!file.exists(fpath) | force) {
+  if (any(!file.exists(fpath)) | force) {
 
     # Check that the directory exists
     check_write_to_data_dir(dir, ask)
@@ -52,10 +52,11 @@ aswe_normal <- function(data, normal_max, normal_min, data_id, ask = FALSE, forc
 
     # Check to ensure that the data contains statistics with the right normal range. Filter for the range you are looking for
     check <- df_normals_initial %>%
-      dplyr::filter(initial_normal_range == paste0(normal_min, " to ", normal_max))
+      dplyr::filter(initial_normal_range == paste0(normal_min, " to ", normal_max)) %>%
+      dplyr::filter(id %in% unique(data$id))
 
     # If the archive doesn't have the normal range you want, get the data for your normal range and save it
-    if (dim(check)[1] < 1) {
+    if (dim(check)[1] < 1 | !(all(unique(check$id) == unique(data$id)))) {
 
       # get normals for the year range you want
       df_normals_out  <- int_aswenorm(data, normal_max, normal_min, data_id)
