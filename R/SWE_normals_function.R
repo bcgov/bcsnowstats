@@ -54,9 +54,11 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
 
       data_id <- "value"
 
+      aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
+
       # filter data for ASWE sites
       data_swe <- data_norm %>%
-        dplyr::filter(id %in% bcsnowdata::snow_auto_location()$LOCATION_ID)
+        dplyr::filter(id %in% aswe)
 
       # Use the aswe_normal() function to fill in data (if appropriate) and calculate normals (if there is sufficient data)
       df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id, force = force)
@@ -80,19 +82,19 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
 
   # If there is both aswe and manual, knit together. Otherwise, return the appropriate data
 
-  if (dim(df_normals_aswe)[1] > 0 && dim(df_normals_man)[1] > 0) {
+  if (exists("df_normals_aswe") && exists("df_normals_man") ) {
     df_normals_out <- list(df_normals_aswe, df_normals_man)
   }
 
-  if (dim(df_normals_aswe)[1] > 0 && dim(df_normals_man)[1] == 0) {
+  if (exists("df_normals_aswe") && !(exists("df_normals_man"))) {
     df_normals_out <- df_normals_aswe
   }
 
-  if (dim(df_normals_aswe)[1] == 0 && dim(df_normals_man)[1] > 0) {
+  if (!(exists("df_normals_aswe")) && exists("df_normals_man")) {
     df_normals_out <- df_normals_man
   }
 
-  if (dim(df_normals_aswe)[1] == 0 && dim(df_normals_man)[1] == 0) {
+  if (!(exists("df_normals_aswe")) && !(exists("df_normals_man"))) {
     df_normals_out <- df_normals_basin
   }
 
