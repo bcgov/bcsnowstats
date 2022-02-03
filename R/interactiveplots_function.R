@@ -1270,4 +1270,5 @@ plot_interactive_manual <- function(id, path, save = "No"){
     }
     # Save statistics for plotting
   }
+  p
 }
