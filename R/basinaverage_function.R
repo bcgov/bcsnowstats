@@ -159,7 +159,8 @@ basin_averaged_swe_interactive <- function(basin_input, exceptions){
 
     test_1 <- bcsnowdata::get_aswe_databc(station_id = site_input,
                               get_year = "All",
-                              parameter_id = "SWE")
+                              parameter = "swe",
+                              timestep = "daily")
 
     # get water year
     test_1$wr <- bcsnowdata::wtr_yr(dates = test_1$date_utc )
@@ -187,9 +188,7 @@ basin_averaged_swe_interactive <- function(basin_input, exceptions){
     return(df_out)
   }
 
-  all_sites_stats <- lapply(ASWE_sites, basin_sites)
-
-  all_sites_statsunqind <- tibble::as_tibble(do.call("rbind", all_sites_stats))
+  all_sites_statsunqind <- tibble::as_tibble(do.call("rbind", lapply(ASWE_sites, basin_sites)))
 
   # if there are statistics for sites within a basin, get the basin-averaged SWE
   if (dim(all_sites_statsunqind)[1] > 1) {
@@ -203,11 +202,12 @@ basin_averaged_swe_interactive <- function(basin_input, exceptions){
      dplyr::ungroup() %>%
      dplyr::group_by(d_m_y) %>%
      dplyr::mutate(mean_basin = mean(mean_day, na.rm=TRUE)) %>% # take the mean value per day across all sites within a basin
-     dplyr::select(-mean_day, -station_id, -station_name) %>%
+     dplyr::select(-mean_day) %>%
      dplyr::distinct(d_m_y, .keep_all = TRUE) %>%
      dplyr::mutate(date_utc = d_m_y, mean_day = mean_basin, value = mean_basin) %>%
      dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc), station_id = basin_input) %>%
-     dplyr::mutate(m_d = format.Date(date_utc, "%m-%d"))
+     dplyr::mutate(m_d = format.Date(date_utc, "%m-%d")) %>%
+     dplyr::filter(!is.na(id))
 
    # Take the statistics for the mean SWE value across all sites within a basin
    mean_stats <- snow_stats(data = SBI_average, normal_min = 1991, normal_max = 2020, data_id = "mean_day")
