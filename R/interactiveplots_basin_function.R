@@ -206,7 +206,7 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
     #                      round(map2_dbl(historic_SWE, mean_basin_SWE, ~ecdf(.x$mean_SWE)(.y))*100, digits = 2), NA))
 
     if (length(todays_data$mean_basin_SWE) >0) {
-      percentile_today <- round(map2_dbl(todays_data$historic_SWE, todays_data$mean_basin_SWE, ~ecdf(.x$mean_SWE)(.y))*100, digits = 0)
+      percentile_today <- round(purrr::map2_dbl(todays_data$historic_SWE, todays_data$mean_basin_SWE, ~ecdf(.x$mean_SWE)(.y))*100, digits = 0)
     } else {
       percentile_today = NA
     }
@@ -353,10 +353,10 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
     # =============================
     # Add in the projected SWE from last data point to the date of the normal peak
     # =============================
- if (exists("deltaSWE")) {
-    if (dim(deltaSWE)[1] > 0){
-      p <- p %>%
-        plotly::add_trace(data = deltaSWE,
+    if (exists("deltaSWE")) {
+      if (dim(deltaSWE)[1] > 0){
+        p <- p %>%
+          plotly::add_trace(data = deltaSWE,
                   x = as.Date(deltaSWE$date_peak),
                   y = as.numeric(deltaSWE$median),
                   legendgroup = 'Projected SWE',
@@ -366,7 +366,7 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
                   showlegend = TRUE,
                   visible = "legendonly",
                   line = list(color = "black", width = 2)) %>%
-        plotly::add_trace(data = deltaSWE,
+          plotly::add_trace(data = deltaSWE,
                   x = as.Date(deltaSWE$date_peak),
                   y = as.numeric(deltaSWE$MAX),
                   legendgroup = 'Projected SWE',
@@ -375,7 +375,7 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
                   color = "max",
                   showlegend = F, visible = "legendonly",
                   line = list(color = "red", width = 2)) %>%
-        plotly::add_trace(data = deltaSWE,
+          plotly::add_trace(data = deltaSWE,
                   x = as.Date(deltaSWE$date_peak),
                   y = as.numeric(deltaSWE$MIN),
                   legendgroup = 'Projected SWE',
@@ -385,7 +385,7 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
                   showlegend = F,
                   visible = "legendonly",
                   line = list(color = "blue", width = 2)) %>%
-        plotly::add_trace(data = deltaSWE,
+          plotly::add_trace(data = deltaSWE,
                   x = as.Date(deltaSWE$date_peak),
                   y = as.numeric(deltaSWE$Q75),
                   legendgroup = 'Projected SWE',
@@ -394,7 +394,7 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
                   color = "Q75",
                   showlegend = F, visible = "legendonly",
                   line = list(color = "orange", width = 2)) %>%
-        plotly::add_trace(data = deltaSWE,
+          plotly::add_trace(data = deltaSWE,
                   x = as.Date(deltaSWE$date_peak),
                   y = as.numeric(deltaSWE$Q25),
                   legendgroup = 'Projected SWE',
@@ -403,7 +403,7 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
                   color = "Q25",
                   showlegend = F, visible = "legendonly",
                   line = list(color = "light blue", width = 2)) %>%
-        plotly::layout(
+          plotly::layout(
           showlegend = T, visible = "legendonly"
         )
      }
@@ -422,4 +422,5 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
   } else {
     p <- print(paste0("No data for basin"))
   }
+  p
 }
