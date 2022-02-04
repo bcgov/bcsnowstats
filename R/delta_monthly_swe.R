@@ -186,7 +186,8 @@ getmonthly_deltaSWE <- function(id) {
 
  test_1 <- bcsnowdata::get_aswe_databc(station_id = id,
                           get_year = "All",
-                          parameter_id = "SWE") # one site, all years
+                          parameter = "swe",
+                          timestep = "daily") # one site, all years
 
  # If there is any data for the site, run monthly delta SWE statistics
  if (dim(test_1)[1] > 0) {
@@ -208,7 +209,7 @@ getmonthly_deltaSWE <- function(id) {
    dplyr::mutate(year = format(Date, "%Y")) %>%
    dplyr::filter(!is.na(Mean_dailySWE))
 
-  if (dim(daily_swe)[1] > 0){
+  if (dim(daily_swe)[1] > 0) {
 
    # Linear interpolation to fill in missing days of data.
    # Create a time series of the snow accomulation months: oct - july
@@ -282,7 +283,8 @@ getmonthly_deltaSWE_YTD <- function(id) {
 
    test_1 <- bcsnowdata::get_aswe_databc(station_id = id,
                              get_year = "All",
-                             parameter_id = "SWE") # one site, all years
+                             parameter = "swe",
+                             timestep = "daily") # one site, all years
 
    # If there is any data for the site, run monthly delta SWE statistics
    if (dim(test_1)[1] > 0) {
