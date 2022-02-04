@@ -213,7 +213,7 @@ basin_averaged_swe_interactive <- function(basin_input, exceptions){
    mean_stats <- snow_stats(data = SBI_average, normal_min = 1991, normal_max = 2020, data_id = "mean_day")
 
    # Bind stats to the SBI average for all sites across a basin
-   mean_basin_all <- dplyr::full_join(SBI_average, mean_stats, by = c("m_d", "station_id"), .keep_all = TRUE) %>%
+   mean_basin_all <- dplyr::full_join(SBI_average, mean_stats, by = c("m_d", "id"), .keep_all = TRUE) %>%
      dplyr::ungroup() %>%
      dplyr::select(-mean_day, -value, -d_m_y) %>%
      dplyr::rename(mean_basin_SWE = mean_basin) %>%
@@ -222,5 +222,6 @@ basin_averaged_swe_interactive <- function(basin_input, exceptions){
      # If there are no ASWE sites with data within the basin, return an empty dataframe
      mean_basin_all <- tibble::enframe(basin_input, NaN) %>%
        dplyr::rename(Basin = value)
-  }
+   }
+  mean_basin_all
 }
