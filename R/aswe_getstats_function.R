@@ -45,15 +45,9 @@ aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal
   # get the mean SWE by day, rather than choosing just the 14:00 measurement
   # ==
   df_tmp_1 <- df_tmp_raw %>%
-    #dplyr::group_by(station_id, wr) %>%
-    #dplyr::filter(lubridate::hour(Date_UTC) == 16 | lubridate::hour(Date_UTC) == 15 |lubridate::hour(Date_UTC) == 14 | lubridate::hour(Date_UTC) == 17) %>% # get only 16:00 or 15:00 daily measurement.
     dplyr::mutate(m_d = format.Date(date_utc, "%m-%d"))  %>%
     dplyr::mutate(date_dmy = as.Date(date_utc, format = "%Y-%m-%d")) %>%
-    #dplyr::group_by(station_id, date_dmy) %>%
-    dplyr::mutate(mean_day = value) #%>%
-    #dplyr::distinct(date_dmy, .keep_all = TRUE) %>% # isolate measurement by day
-    #dplyr::ungroup() %>%
-    #dplyr::group_by(m_d) # group by the mean daily SWE
+    dplyr::mutate(mean_day = value)
 
   # ========================
   # Fill in any missing data that should be zero
@@ -172,14 +166,6 @@ aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal
   }
 
   # Ensure that all of the columns have the right class, otherwise they will not unlist as a dataframe
-  stats_out <- dplyr::as_tibble(latest_stats_3) #%>%
-    #dplyr::mutate(date_max_normal_utc = as.Date(date_max_normal_utc)) %>%
-    #dplyr::mutate(date_min_normal_utc = as.Date(date_min_normal_utc))
-
-  # Check to make sure columns have right attributes
-  #if (class(stats_out$normal_minimum) == "character"){
- #   stats_out[,26:34] %<>% lapply(function(x) as.numeric(as.character(x)))
-  #}
-
+  stats_out <- dplyr::as_tibble(latest_stats_3)
   stats_out
 }
