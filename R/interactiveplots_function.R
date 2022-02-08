@@ -34,7 +34,7 @@ get_swe <- function(id) {
                                  get_year = "All",
                                  normal_min = 1991,
                                  normal_max = 2020,
-                                 force = FALSE)
+                                 force = TRUE)
 
    # Round all numerics within data to the nearest whole number
    data_plot <- round_df(x = data_plot_1, digits = 0)
