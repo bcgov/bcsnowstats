@@ -39,7 +39,7 @@ data_massage <- function(data) {
 
   # Detect whether the data is hourly or daily. If it is hourly, take the daily average
   # Calculate lag
-  data$lag <- as.numeric(data$date_utc - lag(data$date_utc), units = "hours")
+  data$lag <- as.numeric(data$date_utc - dplyr::lag(data$date_utc), units = "hours")
 
   if (any((data$lag == 24))) {
     data_mean <- data %>%
