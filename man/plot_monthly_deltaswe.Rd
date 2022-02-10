@@ -6,7 +6,7 @@
 Function gets the monthly change in statistics and creates a boxplot of the data that it then saves.
 Feb 2020 Ashlee Jollymore}
 \usage{
-plot_monthly_deltaswe(id, path_save, save = "no")
+plot_monthly_deltaswe(id, path_save, save = FALSE)
 }
 \arguments{
 \item{id}{station ID that you are calculating box plot statistics for}
