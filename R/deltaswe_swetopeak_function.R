@@ -31,8 +31,8 @@ deltaSWE_datetopeak <- function(data_plot_1, lastday_data, date_peak){
 
   # Linear interpolation to fill in missing days of data.
   # Create a time series of the snow accomulation months: oct - july
-  time_start <- min(data_initial$date_utc)
-  time_end <- max(data_initial$date_utc)
+  time_start <- min(data_initial$date_dmy)
+  time_end <- max(data_initial$date_dmy)
 
   # Get the last data value
   lastnonNa_data <- data_initial$value[max(which(!is.na(data_initial$value)))]
@@ -45,7 +45,7 @@ deltaSWE_datetopeak <- function(data_plot_1, lastday_data, date_peak){
 
   # Bind to the daily SWE and perform linear interpolation of missing data
   daily_swe_NA <- dplyr::full_join(data_initial, Date) %>%
-    dplyr::arrange(date_utc) %>%
+    dplyr::arrange(date_dmy) %>%
     dplyr::mutate(dailySWE_interp = zoo::na.approx(value, na.rm = FALSE))
 
   # Get only the first and last day of data
@@ -56,7 +56,7 @@ deltaSWE_datetopeak <- function(data_plot_1, lastday_data, date_peak){
   data_diff <- daily_swe_NA %>%
     dplyr::filter(m_d %in% c(md_current, md_peak)) %>%
     dplyr::group_by(wr) %>%
-    dplyr::mutate(first_diff = dailySWE_interp - stats::lag(dailySWE_interp)) %>%
+    dplyr::mutate(first_diff = dailySWE_interp - dplyr::lag(dailySWE_interp)) %>%
     dplyr::filter(!is.na(first_diff)) %>%
     dplyr::ungroup()
 
