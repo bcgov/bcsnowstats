@@ -22,7 +22,7 @@
 #' @keywords monthly delta SWE
 #' @examples \dontrun{}
 
-plot_monthly_deltaswe <- function(id, path_save, save = "no") {
+plot_monthly_deltaswe <- function(id, path_save, save = FALSE) {
 
   # get the statistics for the monthly change in SWE. Function returns both data as well as stats (stats = 1, data = 2)
   monthly_df <- getmonthly_deltaSWE(id)
@@ -71,5 +71,6 @@ plot_monthly_deltaswe <- function(id, path_save, save = "no") {
                              libdir = NULL, # for making the finised product smaller and faster to save
                              title = paste0("Monthly Delta SWE ", id))
     }
+    return(p)
   }
 }
