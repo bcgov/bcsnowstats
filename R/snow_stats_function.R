@@ -55,9 +55,9 @@ snow_stats <- function(data, normal_min, normal_max, data_id, force = FALSE) {
   # Get the max, min dates, as well as the data range and number of years
   # Number of years. Implement threshold
   df_time <- data %>%
+    dplyr::rename(values_stats = all_of(data_id)) %>% # The user can define what data to run the statistics on. Usually this is the daily mean
     dplyr::ungroup() %>%
-    dplyr::group_by(id) %>%
-    dplyr::filter(!is.na(value)) # filter out NA values to get more accurate start and end dates
+    dplyr::filter(!is.na(values_stats)) # filter out NA values to get more accurate start and end dates
 
   # Get the years that have >80% of data coverage during the snow accumulation period! Oct 1 - June 30
   df_time_2 <- df_time %>%
@@ -65,7 +65,7 @@ snow_stats <- function(data, normal_min, normal_max, data_id, force = FALSE) {
     dplyr::ungroup() %>%
     dplyr::group_by(id, wr) %>%
     dplyr::filter(m_d >= "10-01" | m_d <= "06-30") %>%
-    dplyr::mutate(percent_available = length(mean_day) / as.numeric(abs(difftime(as.POSIXct("2018-10-01"), as.POSIXct("2019-06-30"), units = "days")))*100) %>%
+    dplyr::mutate(percent_available = length(values_stats) / as.numeric(abs(difftime(as.POSIXct("2018-10-01"), as.POSIXct("2019-06-30"), units = "days")))*100) %>%
     dplyr::select(id, wr, percent_available) %>%
     unique() %>%
     dplyr::filter(wr == bcsnowdata::wtr_yr(Sys.Date()) | percent_available >= 50)
@@ -86,10 +86,10 @@ snow_stats <- function(data, normal_min, normal_max, data_id, force = FALSE) {
     unique()
 
   # Bind stats regarding the number of years available together
-  df_time <- dplyr::full_join(daterange, numberyears, by = c("id"))
+  df_range <- dplyr::full_join(daterange, numberyears, by = c("id"))
 
   # Bind to the statistics
-  df_stat_date <- dplyr::full_join(df_stat, df_time, by = c("id"))
+  df_stat_date <- dplyr::full_join(df_stat, df_range, by = c("id"))
 
   # get the day of the max and min!!
   min_date <- df_hist %>%
@@ -113,7 +113,7 @@ snow_stats <- function(data, normal_min, normal_max, data_id, force = FALSE) {
 
   ### Calculate normals using function.
   # Function contains all of the thresholds, etc that make it
-  df_normals_1 <- SWE_normals(data, normal_max, normal_min, force)
+  df_normals_1 <- SWE_normals(data = df_time, normal_max, normal_min, force)
 
   # Merge with stats table
   df_stats_all <- dplyr::full_join(df_stat_1, df_normals_1)
