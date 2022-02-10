@@ -54,6 +54,7 @@ The get_snow_stats() function returns statistics for a particular station for a 
 ```{r example_statsaswe}
 # Return statistics for 2F18P for March 1, 2021. Use a normal period from 1991-2020. Force the recalculation of the normals.
 library(bcsnowstats)
+library(bcsnowdata)
 
 stats_ASWE_west <- get_snow_stats(station_id = "2C09Q",
                                     survey_period = "03-01",
