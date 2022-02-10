@@ -163,16 +163,13 @@ basin_averaged_swe_interactive <- function(basin_input, exceptions){
                               timestep = "daily")
 
     # get water year
-    test_1$wr <- bcsnowdata::wtr_yr(dates = test_1$date_utc )
+    test_1$wr <- bcsnowdata::wtr_yr(dates = test_1$date_utc)
 
     # get the mean SWE by day, rather than choosing just the 14:00 measurement
     df_tmp_stat <- test_1 %>%
       #dplyr::filter(lubridate::hour(date_utc) == 16 | lubridate::hour(date_utc) == 15 |lubridate::hour(date_utc) == 14 | lubridate::hour(date_utc) == 17) %>% # get only 16:00 or 15:00 daily measurement.
       dplyr::mutate(m_d = format.Date(date_utc, "%m-%d"))  %>%
       dplyr::mutate(Date_dmy = as.Date(date_utc)) %>%
-      #dplyr::mutate(Date_dmy = dmy(as.Date(date_utc))) %>%
-      dplyr::group_by(Date_dmy) %>%
-      dplyr::mutate(mean_day = mean(value, na.rm = TRUE)) %>%
       dplyr::distinct(Date_dmy, .keep_all = TRUE) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(m_d)
@@ -201,21 +198,21 @@ basin_averaged_swe_interactive <- function(basin_input, exceptions){
      #dplyr::rename(value = "mean_day") %>%
      dplyr::ungroup() %>%
      dplyr::group_by(d_m_y) %>%
-     dplyr::mutate(mean_basin = mean(mean_day, na.rm=TRUE)) %>% # take the mean value per day across all sites within a basin
-     dplyr::select(-mean_day) %>%
+     dplyr::mutate(mean_basin = mean(value, na.rm = TRUE)) %>% # take the mean value per day across all sites within a basin
+     dplyr::select(-value) %>%
      dplyr::distinct(d_m_y, .keep_all = TRUE) %>%
-     dplyr::mutate(date_utc = d_m_y, mean_day = mean_basin, value = mean_basin) %>%
-     dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc), station_id = basin_input) %>%
+     dplyr::mutate(date_utc = d_m_y) %>%
+     dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc), id = basin_input) %>%
      dplyr::mutate(m_d = format.Date(date_utc, "%m-%d")) %>%
      dplyr::filter(!is.na(id))
 
    # Take the statistics for the mean SWE value across all sites within a basin
-   mean_stats <- snow_stats(data = SBI_average, normal_min = 1991, normal_max = 2020, data_id = "mean_day")
+   mean_stats <- snow_stats(data = SBI_average, normal_min = 1991, normal_max = 2020, data_id = "mean_basin")
 
    # Bind stats to the SBI average for all sites across a basin
    mean_basin_all <- dplyr::full_join(SBI_average, mean_stats, by = c("m_d", "id"), .keep_all = TRUE) %>%
      dplyr::ungroup() %>%
-     dplyr::select(-mean_day, -value, -d_m_y) %>%
+     dplyr::select(-d_m_y) %>%
      dplyr::rename(mean_basin_SWE = mean_basin) %>%
      dplyr::mutate(sites_used = toString(ASWE_sites))
    } else {
