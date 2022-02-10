@@ -31,16 +31,16 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
   # if the user input data as a station name (i.e., the function is being used as a stand alone function), get the data for the station
   if (all(data %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) {
     data_norm <- bcsnowdata::get_aswe_databc(
-      station_id = data,
-      get_year = "All",
-      parameter = "swe",
-      timestep = "daily"
-    )
+        station_id = data,
+        get_year = "All",
+        parameter = "swe",
+        timestep = "daily") %>%
+      dplyr::rename("values_stats" = value)
   } else if (all(data %in% bcsnowdata::snow_manual_location()$LOCATION_ID)) {
     data_norm <- bcsnowdata::get_manual_swe(
-      id = data,
-      get_year = "All",
-      survey_period = "All")
+        station_id = data,
+        get_year = "All",
+        survey_period = "All")
   } else {
     data_norm <- data
   }
@@ -61,7 +61,7 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
         dplyr::filter(id %in% aswe)
 
       # Use the aswe_normal() function to fill in data (if appropriate) and calculate normals (if there is sufficient data)
-      df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id, force = force)
+      df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id = "values_stats", force = force)
 
   # If the site is manual site
   } else if (any(id %in% bcsnowdata::snow_manual_location()$LOCATION_ID)) {
@@ -94,7 +94,7 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
     df_normals_out <- df_normals_man
   }
 
-  if (!(exists("df_normals_aswe")) && !(exists("df_normals_man"))) {
+  if (!(exists("df_normals_aswe")) && !(exists("df_normals_man")) && exists("df_normals_basin")) {
     df_normals_out <- df_normals_basin
   }
 
