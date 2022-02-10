@@ -196,7 +196,7 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
       typical_percentnorm <- "Insufficient data"
     }
     # Percent of median
-    percent_median <- paste0(round(todays_data$mean_basin_SWE/todays_data$Q50*100, digits = 0), "%")
+    percent_median <- paste0(round(todays_data$mean_basin_SWE / todays_data$Q50 * 100, digits = 0), "%")
 
     ## Percentile rank
     # Calculate the percentile
@@ -205,8 +205,8 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
     #   dplyr::mutate(percentile = ifelse(length(unique(year(date_utc))) > 5,
     #                      round(map2_dbl(historic_SWE, mean_basin_SWE, ~ecdf(.x$mean_SWE)(.y))*100, digits = 2), NA))
 
-    if (length(todays_data$mean_basin_SWE) >0) {
-      percentile_today <- round(purrr::map2_dbl(todays_data$historic_SWE, todays_data$mean_basin_SWE, ~ecdf(.x$mean_SWE)(.y))*100, digits = 0)
+    if (length(todays_data$mean_basin_SWE) > 0) {
+      percentile_today <- round(purrr::map2_dbl(todays_data$historic_swe, todays_data$mean_basin_SWE, ~ecdf(.x$mean_SWE)(.y))*100, digits = 0)
     } else {
       percentile_today = NA
     }
@@ -217,7 +217,8 @@ plot_interactive_basin <- function(basin, exceptions = NA, path_basin, save) {
     data_all <- data_all %>%
       dplyr::mutate(date_utc = as.Date(date_utc)) %>%
       dplyr::arrange(date_utc) %>%
-      dplyr::mutate(value = mean_basin_SWE)
+      dplyr::mutate(value = mean_basin_SWE) %>%
+      dplyr::mutate(date_dmy = date_utc)
 
     lastday_data <- data_all$date_utc[max(which(!is.na(data_all$mean_basin_SWE)))]
     date_peak <- date_max[1]
