@@ -58,6 +58,18 @@ The get_snow_stats() function returns statistics for a particular
 station for a specific day or across the entire period of record. The
 station can be either a manual or automated snow monitoring station.
 
+    #> Loading required package: ggplot2
+    #> 
+    #> Attaching package: 'plotly'
+    #> The following object is masked from 'package:ggplot2':
+    #> 
+    #>     last_plot
+    #> The following object is masked from 'package:stats':
+    #> 
+    #>     filter
+    #> The following object is masked from 'package:graphics':
+    #> 
+    #>     layout
     #> [1] "Calculating statistics for 2C09Q"
     #> Reading the data using the read_csv function from the readr package.
     #> Warning: One or more parsing issues, see `problems()` for details
