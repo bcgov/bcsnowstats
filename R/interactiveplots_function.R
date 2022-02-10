@@ -495,10 +495,10 @@ plot_interactive_aswe <- function (path, id, save = "No") {
   }
 
  # Percentile rank
- percentile_today <- data_plot_1$percentile[data_plot_1$date_utc == Sys.Date()]
+ percentile_today <- data_plot_1$percentile[data_plot_1$date_dmy == Sys.Date()]
 
  # Percent of median
- percent_median <- data_plot_1$percent_Q50[data_plot_1$date_utc == Sys.Date()]
+ percent_median <- data_plot_1$percent_Q50[data_plot_1$date_dmy == Sys.Date()]
 
  # Elevation
  el_site <- data.frame(elevation()) %>%
