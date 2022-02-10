@@ -67,7 +67,7 @@ stats_ASWE_west <- get_snow_stats(station_id = "2C09Q",
 
 The SWE_normals function calculates normals for a defined time span. See vignette for a detailed explanation of how normals are calculated (including data coverage thresholds and data filling procedures).
 
-```{r examples_mswe}
+```{r examples_normal}
 # Get statistics for 5 manual snow stations for March 1st, 2021. Use a normal period of 1991-2020.
 
 # Calculate normals from 1991-2020 for an automated station 2C09Q - Morrisey Ridge. Force the re-download of data.
@@ -80,49 +80,53 @@ normal_manual <- SWE_normals(data = "4E01", normal_max = 2020, normal_min = 1991
 
 ##### Visualizations
 
-This package also contains several functions for visualizing data and statistics from manual and automated snow monitoring.
+This package also contains several functions for visualizing data and statistics from manual and automated snow monitoring. The RFC also produces a map that includes these interactive snow plots. All interactive plots were made using the plotly R package. 
+
+###### Automated Snow Station Visulizations
 
 1. plot_interactive_aswe
 This function plots SWE for the current water year for a particular ASWE station. The statistics for the station, including data for the past years, is also plotted.
-```{r, eval = FALSE}
+```{r plot_interactive, eval = FALSE}
 plot_test <- plot_interactive_aswe(id = "1D08P",
-                      save = "No")
+                      save = FALSE)
 ```
 
-2. plot_interactive_manual
-This function plots data from manual surveys. The interactive plot also shows statistics for the most recent manual snow survey, as well as the previous years data.
-
-```{r, eval = FALSE}
-plot_manual <- plot_interactive_manual(id = "1A04",
-                                       save = "No")
-```
 
 3. plot_climate_aswe
 This function plots climate data from ASWE sites for the current water year, including daily precipitation, daily max and min air temperatures, and daily change in SWE.
 
-```{r, eval = FALSE}
-monthly <- plot_monthly_deltaswe(id ="1A01P", 
-                      path_save = paste0(drive_Q, "/Real-time_Data/ASP_daily_interactive/ASWE/MonthlyDeltaSWE_boxplots/"))
+```{r plot_climate, eval = FALSE}
+monthly <- plot_monthly_deltaswe(id ="1A01P",
+                                 save = FALSE)
 ```
-
 
 4. plot_monthly_deltaswe
 This function plots the monthly change in SWE for automated snow survey stations. The monthly change is calculated for past months of data, and shows the change in SWE from the first to the last day of the month for the current year; the boxplot shows how the current year compares to previous years of data.
 
-```{r, eval = FALSE}
+```{r plot_monthly, eval = FALSE}
 monthly <- plot_monthly_deltaswe(id ="1A01P", 
-                      path_save = paste0(drive_Q, "/Real-time_Data/ASP_daily_interactive/ASWE/MonthlyDeltaSWE_boxplots/"))
+                      save = FALSE)
 ```
 
-5. plot_interactive_basin
+###### Manual Snow Station Visualizations
+1. plot_interactive_manual
+This function plots data from manual surveys. The interactive plot also shows statistics for the most recent manual snow survey, as well as the previous years data.
+
+```{rplot_manual, eval = FALSE}
+plot_manual <- plot_interactive_manual(id = "1A04",
+                                       save = FALSE)
+```
+
+###### Snow Basin Visualizations
+1. plot_interactive_basin
 This function returns an interactive plot of SWE values averaged for all ASWE stations within a particular basin. Data for past years is also presented within the same plot.
 
 Exceptions are any sites that the user wishes to skip within the calculation of basin-wide SWE (such as those with issues). The user also has the option to save the plot in the location of their specification.
 
-```{r, eval = FALSE}
+```{r plot_basin, eval = FALSE}
 plot_basin <- plot_interactive_basin(basin = "UpperFraserEast",
                        exceptions = NA,
-                       save = "No")
+                       save = FALSE)
 ```
 
 ### Project Status
