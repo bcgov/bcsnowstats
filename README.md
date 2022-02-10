@@ -58,22 +58,43 @@ The get_snow_stats() function returns statistics for a particular
 station for a specific day or across the entire period of record. The
 station can be either a manual or automated snow monitoring station.
 
-``` r
-# Return statistics for 2F18P for March 1, 2021. Use a normal period from 1991-2020. Force the recalculation of the normals.
-library(bcsnowstats)
-
-stats_ASWE_west <- get_snow_stats(station_id = "2C09Q",
-                                    survey_period = "03-01",
-                                    get_year = "2021",
-                                    normal_min = 1991,
-                                    normal_max = 2020,
-                                    force = FALSE)
-#> [1] "Calculating statistics for 2C09Q"
-#> [1] "SWE archive was updated up to 2021"
-#>   |                                                                              |                                                                      |   0%  |                                                                              |======================================================================| 100%
-#>   |                                                                              |                                                                      |   0%  |                                                                              |=                                                                     |   1%  |                                                                              |=                                                                     |   2%  |                                                                              |==                                                                    |   3%  |                                                                              |===                                                                   |   4%  |                                                                              |====                                                                  |   5%  |                                                                              |====                                                                  |   6%  |                                                                              |=====                                                                 |   7%  |                                                                              |======                                                                |   8%  |                                                                              |======                                                                |   9%  |                                                                              |=======                                                               |   9%  |                                                                              |=======                                                               |  10%  |                                                                              |========                                                              |  12%  |                                                                              |=========                                                             |  13%  |                                                                              |==========                                                            |  14%  |                                                                              |==========                                                            |  15%  |                                                                              |===========                                                           |  15%  |                                                                              |===========                                                           |  16%  |                                                                              |============                                                          |  17%  |                                                                              |=============                                                         |  18%  |                                                                              |=============                                                         |  19%  |                                                                              |==============                                                        |  20%  |                                                                              |==============                                                        |  21%  |                                                                              |===============                                                       |  21%  |                                                                              |================                                                      |  22%  |                                                                              |================                                                      |  23%  |                                                                              |=================                                                     |  24%  |                                                                              |=================                                                     |  25%  |                                                                              |==================                                                    |  25%  |                                                                              |==================                                                    |  26%  |                                                                              |===================                                                   |  27%  |                                                                              |===================                                                   |  28%  |                                                                              |====================                                                  |  29%  |                                                                              |=====================                                                 |  29%  |                                                                              |=====================                                                 |  30%  |                                                                              |======================                                                |  31%  |                                                                              |======================                                                |  32%  |                                                                              |=======================                                               |  33%  |                                                                              |========================                                              |  34%  |                                                                              |========================                                              |  35%  |                                                                              |=========================                                             |  36%  |                                                                              |==========================                                            |  37%  |                                                                              |===========================                                           |  38%  |                                                                              |===========================                                           |  39%  |                                                                              |============================                                          |  40%  |                                                                              |=============================                                         |  41%  |                                                                              |=============================                                         |  42%  |                                                                              |==============================                                        |  43%  |                                                                              |===============================                                       |  44%  |                                                                              |================================                                      |  45%  |                                                                              |================================                                      |  46%  |                                                                              |=================================                                     |  48%  |                                                                              |==================================                                    |  48%  |                                                                              |==================================                                    |  49%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================                                  |  52%  |                                                                              |=====================================                                 |  52%  |                                                                              |=====================================                                 |  53%  |                                                                              |======================================                                |  54%  |                                                                              |======================================                                |  55%  |                                                                              |=======================================                               |  56%  |                                                                              |========================================                              |  57%  |                                                                              |=========================================                             |  58%  |                                                                              |=========================================                             |  59%  |                                                                              |==========================================                            |  60%  |                                                                              |===========================================                           |  61%  |                                                                              |===========================================                           |  62%  |                                                                              |============================================                          |  63%  |                                                                              |============================================                          |  64%  |                                                                              |=============================================                         |  64%  |                                                                              |==============================================                        |  65%  |                                                                              |==============================================                        |  66%  |                                                                              |===============================================                       |  67%  |                                                                              |================================================                      |  68%  |                                                                              |================================================                      |  69%  |                                                                              |=================================================                     |  70%  |                                                                              |=================================================                     |  71%  |                                                                              |==================================================                    |  71%  |                                                                              |===================================================                   |  72%  |                                                                              |===================================================                   |  73%  |                                                                              |====================================================                  |  74%  |                                                                              |====================================================                  |  75%  |                                                                              |=====================================================                 |  75%  |                                                                              |=====================================================                 |  76%  |                                                                              |======================================================                |  77%  |                                                                              |======================================================                |  78%  |                                                                              |=======================================================               |  79%  |                                                                              |========================================================              |  79%  |                                                                              |========================================================              |  80%  |                                                                              |=========================================================             |  81%  |                                                                              |=========================================================             |  82%  |                                                                              |==========================================================            |  83%  |                                                                              |===========================================================           |  84%  |                                                                              |===========================================================           |  85%  |                                                                              |============================================================          |  86%  |                                                                              |=============================================================         |  87%  |                                                                              |==============================================================        |  88%  |                                                                              |==============================================================        |  89%  |                                                                              |===============================================================       |  90%  |                                                                              |===============================================================       |  91%  |                                                                              |================================================================      |  91%  |                                                                              |================================================================      |  92%  |                                                                              |=================================================================     |  93%  |                                                                              |==================================================================    |  94%  |                                                                              |==================================================================    |  95%  |                                                                              |===================================================================   |  95%  |                                                                              |===================================================================   |  96%  |                                                                              |====================================================================  |  97%  |                                                                              |====================================================================  |  98%  |                                                                              |===================================================================== |  98%  |                                                                              |===================================================================== |  99%  |                                                                              |======================================================================| 100%
-#> Joining, by = c("station_id", "m_d")
-```
+    #> [1] "Calculating statistics for 2C09Q"
+    #> Reading the data using the read_csv function from the readr package.
+    #> Warning: One or more parsing issues, see `problems()` for details
+    #> Rows: 17365 Columns: 108
+    #> -- Column specification --------------------------------------------------------
+    #> Delimiter: ","
+    #> dbl  (105): 1A01P Yellowhead Lake, 1A02P McBride Upper, 1A03P Barkerville, 1...
+    #> lgl    (2): 2D10P Gray Creek Upper, 4A12P Tsaydaychi Lake
+    #> dttm   (1): DATE(UTC)
+    #> 
+    #> i Use `spec()` to retrieve the full column specification for this data.
+    #> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+    #> Reading the data using the read_csv function from the readr package.
+    #> 
+    #> Rows: 3190 Columns: 92
+    #> -- Column specification --------------------------------------------------------
+    #> Delimiter: ","
+    #> dbl  (91): 1A01P Yellowhead Lake, 1A02P McBride Upper, 1A03P Barkerville, 1A...
+    #> dttm  (1): DATE(UTC)
+    #> 
+    #> i Use `spec()` to retrieve the full column specification for this data.
+    #> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+    #> Joining, by = c("date_utc", "id", "value", "parameter")
+    #> Saving to bcsnowstats data directory at C:\Users\AJOLLYMO\AppData\Local/R/cache/R/bcsnowstats
+    #> 
+    #> Joining, by = c("id", "m_d")
+    #> # A tibble: 1 x 51
+    #>   date_utc            id    value parameter    wr m_d   date_dmy   mean_day
+    #>   <dttm>              <chr> <dbl> <chr>     <dbl> <chr> <date>        <dbl>
+    #> 1 2021-03-01 16:00:00 2C09Q   358 swe        2021 03-01 2021-03-01      358
+    #> # ... with 43 more variables: min <dbl>, swe_mean <dbl>, Q5 <dbl>, Q10 <dbl>,
+    #> #   Q25 <dbl>, Q50 <dbl>, Q75 <dbl>, Q90 <dbl>, max <dbl>, maxdate <dbl>,
+    #> #   mindate <dbl>, data_range <chr>, numberofyears <int>, date_min_utc <dttm>,
+    #> #   date_max_utc <dttm>, normal_minimum <dbl>, normal_swe_mean <dbl>,
+    #> #   normal_Q5 <dbl>, normal_Q10 <dbl>, normal_Q25 <dbl>, normal_Q50 <dbl>,
+    #> #   normal_Q75 <dbl>, normal_Q90 <dbl>, normal_maximum <dbl>,
+    #> #   data_range_normal <chr>, normal_datarange_estimated <int>, ...
 
 1.  SWE_normals()
 
@@ -81,53 +102,73 @@ The SWE_normals function calculates normals for a defined time span. See
 vignette for a detailed explanation of how normals are calculated
 (including data coverage thresholds and data filling procedures).
 
-``` r
-# Get statistics for 5 manual snow stations for March 1st, 2021. Use a normal period of 1991-2020.
-
-# Calculate normals from 1991-2020 for an automated station 2C09Q - Morrisey Ridge. Force the re-download of data.
-normal_aswe <- SWE_normals(data = "2C09Q", normal_max = 2020, normal_min = 1991, force = TRUE)
-#> [1] "SWE archive was updated up to 2021"
-#> Saving to bcsnowstats data directory at C:\Users\AJOLLYMO\AppData\Local/R/cache/R/bcsnowstats
-
-# Calculate normals from 1991-2020 for an manual station 4E01. Force the re-download of data.
-normal_manual <- SWE_normals(data = "4E01", normal_max = 2020, normal_min = 1991, force = TRUE)
-#> [1] "Manual SWE archive was updated up to 2021-06-18"
-#>   |                                                                              |                                                                      |   0%  |                                                                              |======================================================================| 100%
-#>   |                                                                              |                                                                      |   0%  |                                                                              |=================================================================     |  93%  |                                                                              |======================================================================| 100%
-#> Rows: 63 Columns: 13
-#> -- Column specification --------------------------------------------------------
-#> Delimiter: ","
-#> chr  (5): Snow Course Name, Number, Survey Code, Snow Line Code, Survey Period
-#> dbl  (7): Elev. metres, Snow Depth cm, Water Equiv. mm, Snow Line Elev. m, %...
-#> date (1): Date of Survey
-#> 
-#> i Use `spec()` to retrieve the full column specification for this data.
-#> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
-#> Joining, by = "station_id"
-#> Joining, by = "station_id"
-```
+    #> Reading the data using the read_csv function from the readr package.
+    #> Warning: One or more parsing issues, see `problems()` for details
+    #> Rows: 17365 Columns: 108
+    #> -- Column specification --------------------------------------------------------
+    #> Delimiter: ","
+    #> dbl  (105): 1A01P Yellowhead Lake, 1A02P McBride Upper, 1A03P Barkerville, 1...
+    #> lgl    (2): 2D10P Gray Creek Upper, 4A12P Tsaydaychi Lake
+    #> dttm   (1): DATE(UTC)
+    #> 
+    #> i Use `spec()` to retrieve the full column specification for this data.
+    #> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+    #> Reading the data using the read_csv function from the readr package.
+    #> 
+    #> Rows: 3190 Columns: 92
+    #> -- Column specification --------------------------------------------------------
+    #> Delimiter: ","
+    #> dbl  (91): 1A01P Yellowhead Lake, 1A02P McBride Upper, 1A03P Barkerville, 1A...
+    #> dttm  (1): DATE(UTC)
+    #> 
+    #> i Use `spec()` to retrieve the full column specification for this data.
+    #> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+    #> Joining, by = c("date_utc", "id", "value", "parameter")
+    #> Saving to bcsnowstats data directory at C:\Users\AJOLLYMO\AppData\Local/R/cache/R/bcsnowstats
+    #> 
+    #> Reading the data using the read_csv function from the readr package.
+    #> 
+    #> Rows: 58014 Columns: 13
+    #> -- Column specification --------------------------------------------------------
+    #> Delimiter: ","
+    #> chr  (5): Snow Course Name, Number, Survey Code, Snow Line Code, Survey Period
+    #> dbl  (7): Elev. metres, Snow Depth cm, Water Equiv. mm, Snow Line Elev. m, %...
+    #> date (1): Date of Survey
+    #> 
+    #> i Use `spec()` to retrieve the full column specification for this data.
+    #> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+    #> Reading the data using the read_csv function from the readr package.
+    #> 
+    #> Rows: 180 Columns: 13
+    #> -- Column specification --------------------------------------------------------
+    #> Delimiter: ","
+    #> chr  (5): Snow Course Name, Number, Survey Code, Snow Line Code, Survey Period
+    #> dbl  (7): Elev. metres, Snow Depth cm, Water Equiv. mm, Snow Line Elev. m, %...
+    #> date (1): Date of Survey
+    #> 
+    #> i Use `spec()` to retrieve the full column specification for this data.
+    #> i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+    #> Joining, by = c("Snow Course Name", "Number", "Elev. metres", "Date of Survey", "Snow Depth cm", "Water Equiv. mm", "Survey Code", "Snow Line Elev. m", "Snow Line Code", "% of Normal", "Density %", "Survey Period", "Normal mm")
+    #> Joining, by = "id"
+    #> Joining, by = "id"
 
 ##### Visualizations
 
 This package also contains several functions for visualizing data and
-statistics from manual and automated snow monitoring.
+statistics from manual and automated snow monitoring. The RFC also
+produces a map that includes these interactive snow plots. All
+interactive plots were made using the plotly R package.
+
+###### Automated Snow Station Visulizations
 
 1.  plot_interactive_aswe This function plots SWE for the current water
     year for a particular ASWE station. The statistics for the station,
     including data for the past years, is also plotted.
 
 ``` r
-plot_test <- plot_interactive_aswe(id = "1D08P",
-                      save = "No")
-```
-
-1.  plot_interactive_manual This function plots data from manual
-    surveys. The interactive plot also shows statistics for the most
-    recent manual snow survey, as well as the previous years data.
-
-``` r
-plot_manual <- plot_interactive_manual(id = "1A04",
-                                       save = "No")
+plot_test <- plot_interactive_aswe(id = "1A01P",
+                      save = FALSE)
+plot_test$SWEplot
 ```
 
 1.  plot_climate_aswe This function plots climate data from ASWE sites
@@ -135,8 +176,9 @@ plot_manual <- plot_interactive_manual(id = "1A04",
     and min air temperatures, and daily change in SWE.
 
 ``` r
-monthly <- plot_monthly_deltaswe(id ="1A01P", 
-                      path_save = paste0(drive_Q, "/Real-time_Data/ASP_daily_interactive/ASWE/MonthlyDeltaSWE_boxplots/"))
+climate <- plot_climate_aswe(id ="1A01P",
+                                 save = FALSE)
+climate
 ```
 
 1.  plot_monthly_deltaswe This function plots the monthly change in SWE
@@ -146,9 +188,24 @@ monthly <- plot_monthly_deltaswe(id ="1A01P",
     how the current year compares to previous years of data.
 
 ``` r
-monthly <- plot_monthly_deltaswe(id ="1A01P", 
-                      path_save = paste0(drive_Q, "/Real-time_Data/ASP_daily_interactive/ASWE/MonthlyDeltaSWE_boxplots/"))
+monthly_delta <- plot_monthly_deltaswe(id ="1A01P", 
+                      save = FALSE)
+monthly_delta
 ```
+
+###### Manual Snow Station Visualizations
+
+1.  plot_interactive_manual This function plots data from manual
+    surveys. The interactive plot also shows statistics for the most
+    recent manual snow survey, as well as the previous years data.
+
+``` rplot_manual
+plot_manual <- plot_interactive_manual(id = "1B06",
+                                       save = FALSE)
+plot_manual
+```
+
+###### Snow Basin Visualizations
 
 1.  plot_interactive_basin This function returns an interactive plot of
     SWE values averaged for all ASWE stations within a particular basin.
@@ -161,7 +218,8 @@ has the option to save the plot in the location of their specification.
 ``` r
 plot_basin <- plot_interactive_basin(basin = "UpperFraserEast",
                        exceptions = NA,
-                       save = "No")
+                       save = FALSE)
+plot_basin
 ```
 
 ### Project Status
