@@ -45,7 +45,7 @@ aswe_normalratio <- function(data_soi, stations_adj, data_id, normal_max, normal
 
   # ------------------------------------------------------
   # Calculate the estimated SWE using the ratio normal method (for mean SWE for each day)
-  ratio_all <- lapply(stations_adj[5], ratio_function,
+  ratio_all <- lapply(stations_adj, ratio_function,
                     data_station_oi = data_soi_m,
                     data_id, normal_max, normal_min)
 
