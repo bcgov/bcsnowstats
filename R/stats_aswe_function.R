@@ -36,8 +36,8 @@ stats_aswe <- function(station_id, parameter_id = "SWE", survey_period = "All", 
   current_wy <- bcsnowdata::wtr_yr(Sys.time())
 
   # If the input is All, get the station list from the website for current sites
-  if (any(station_id[1] == "All")){
-    station_list <- bcsnowdata::snow_auto_location()$LOCATION_ID
+  if (any(station_id[1] %in% c("All", "all", "ALL")) || any(station_id[1] %in% c("aswe", "ASWE", "Aswe"))) {
+    station_list <- unique(bcsnowdata::snow_auto_location()$LOCATION_ID)
   } else {
     station_list <- unique(station_id)
   }
@@ -65,10 +65,18 @@ stats_aswe <- function(station_id, parameter_id = "SWE", survey_period = "All", 
     survey_period <- survey_period
   }
 
+  # Get data for the station in order to calculate statistics
+  df <- bcsnowdata::get_aswe_databc(station_id = station_list,
+                                            get_year = "All",
+                                            parameter = "swe",
+                                            timestep = "daily"
+  )
+
   # Getting data at this point truncates data returned! Get data within lapply loop
   # use get_percentile function to calculate statistics for the dates and stations specified
   list_stats <- lapply(station_list,
                        aswe_get_stats,
+                       data_all = df,
                        survey_period = survey_period,
                        get_year = get_year,
                        normal_min, normal_max, force)
