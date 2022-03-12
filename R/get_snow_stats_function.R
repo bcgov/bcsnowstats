@@ -25,14 +25,26 @@
 #' @keywords Retrieve snow statistics
 #' @examples \dontrun{}
 
-get_snow_stats <- function(station_id, survey_period, get_year, normal_min, normal_max, force = TRUE) {
+get_snow_stats <- function(station_id = c("all", "aswe", "manual"), survey_period, get_year, normal_min, normal_max, force = TRUE) {
 
-  # Check to see whether the station is a manual or automated station
-  id_aswe <- station_id[station_id %in% bcsnowdata::snow_auto_location()$LOCATION_ID]
+  if (any(station_id %in% c("aswe", "ASWE", "Aswe"))) {
+    id_aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
+  } else if (any(station_id %in% c("manual", "MANUAL", "Manual", "man"))) {
+    id_manual <- bcsnowdata::snow_manual_location()$LOCATION_ID
+  } else if (any(station_id %in% c("ALL", "all", "All"))) {
+    id_aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
+    id_manual <- bcsnowdata::snow_manual_location()$LOCATION_ID
+  } else {
 
-  id_manual <- station_id[station_id %in% bcsnowdata::snow_manual_location()$LOCATION_ID]
+    # Check to see whether the station is a manual or automated station
+    id_aswe <- station_id[station_id %in% bcsnowdata::snow_auto_location()$LOCATION_ID]
 
-  if (length(id_aswe) > 0) {
+    id_manual <- station_id[station_id %in% bcsnowdata::snow_manual_location()$LOCATION_ID]
+  }
+
+
+  #if (length(id_aswe) > 0) {
+  if (any(station_id %in% c("aswe", "ASWE", "Aswe")) || any(station_id %in% c("ALL", "all", "All")) || any(station_id %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) {
     df_aswe <- stats_aswe(station_id = id_aswe,
                survey_period = survey_period,
                get_year = get_year,
@@ -41,7 +53,7 @@ get_snow_stats <- function(station_id, survey_period, get_year, normal_min, norm
                force = force)
   }
   # Manual data
-  if (length(id_manual) > 0) {
+  if (station_id %in% c("manual", "MANUAL", "Manual", "man") || station_id %in% c("ALL", "all", "All") || station_id %in%  bcsnowdata::snow_manual_location()$LOCATION_ID) {
     df_manual <- stats_MSWE(station_id = id_manual,
                survey_period = survey_period,
                get_year = get_year,
