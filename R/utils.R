@@ -55,7 +55,7 @@ fillNA0 <- function(data, ...) {
   # If the last value before the NA value was 0, carry the 0 forward through NAs
 
   data_na <- data %>%
-    dplyr::group_by(wr)
+    dplyr::group_by(id, wr)
 
   #where are the NA values?
   NAvalues <- which(is.na(data_na$mean_day), arr.ind = TRUE)
