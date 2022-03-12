@@ -7,7 +7,7 @@ Diverts into either the workflow for calculating ASWE or manual snow station
 November 2021, Ashlee Jollymore}
 \usage{
 get_snow_stats(
-  station_id,
+  station_id = c("all", "aswe", "manual"),
   survey_period,
   get_year,
   normal_min,
