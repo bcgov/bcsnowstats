@@ -14,7 +14,6 @@
 #' Script for calculating normals for both ASWE and manual stations. This function calls on the correct function to fill data and calculate normals depending on whether the station is a manual or aswe site.
 #' Part of calculating normals workflow for ASWE data. January 2021, Ashlee Jollymore
 #' @param data data from manual or ASWE site(s). Can also be a station ID if the function is being called on its own.
-#' @param id station ID of the site you are calculating normals for
 #' @param normal_max Max year that the normal period spans
 #' @param normal_min Min year that the normal period spans
 #' @param force whether you want to update the cache. Defaults to FALSE, or no
@@ -26,7 +25,7 @@
 # Calculate the snow normals
 # -----------------------------
 
-SWE_normals <- function(data, normal_max, normal_min, force = FALSE) {
+SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
 
   # if the user input data as a station name (i.e., the function is being used as a stand alone function), get the data for the station
   if (all(data %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) {
