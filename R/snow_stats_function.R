@@ -24,7 +24,7 @@
 #' @keywords internal
 #' @examples \dontrun{}
 
-snow_stats <- function(data, normal_min, normal_max, data_id, force = FALSE) {
+snow_stats <- function(data, normal_min, normal_max, data_id, force = FALSE, ...) {
 
   # Ensure that current water year is defined
   current_wy <- bcsnowdata::wtr_yr(Sys.Date())
