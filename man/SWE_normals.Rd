@@ -5,7 +5,7 @@
 \title{Script for calculating normals for both ASWE and manual stations. This function calls on the correct function to fill data and calculate normals depending on whether the station is a manual or aswe site.
 Part of calculating normals workflow for ASWE data. January 2021, Ashlee Jollymore}
 \usage{
-SWE_normals(data, normal_max, normal_min, force = FALSE)
+SWE_normals(data, normal_max, normal_min, force = FALSE, ...)
 }
 \arguments{
 \item{data}{data from manual or ASWE site(s). Can also be a station ID if the function is being called on its own.}
@@ -15,8 +15,6 @@ SWE_normals(data, normal_max, normal_min, force = FALSE)
 \item{normal_min}{Min year that the normal period spans}
 
 \item{force}{whether you want to update the cache. Defaults to FALSE, or no}
-
-\item{id}{station ID of the site you are calculating normals for}
 }
 \description{
 Script for calculating normals for both ASWE and manual stations. This function calls on the correct function to fill data and calculate normals depending on whether the station is a manual or aswe site.
