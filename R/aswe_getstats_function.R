@@ -13,6 +13,7 @@
 
 #' Internal function for calculating quartiles and percentiles for each day for each site from automated sites; called within lapply function in stats_aswe() function
 #' January 2021, Ashlee Jollymore
+#' @param data Data for stations you want to get statistics for
 #' @param stations station that you are calculating statistics for
 #' @param survey_period survey period in %m-%d format
 #' @param get_year water year that you are calculatign statistics for
@@ -25,16 +26,14 @@
 #' @keywords internal
 #' @examples \dontrun{}
 
-aswe_get_stats <- function(stations, survey_period, get_year, normal_min, normal_max, force = FALSE) {
+aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_min, normal_max, force = FALSE) {
 
   print(paste0("Calculating statistics for ", stations))
 
   # Get data for the station in order to calculate statistics
-  df_tmp_raw <- bcsnowdata::get_aswe_databc(station_id = stations,
-                                            get_year = "All",
-                                            parameter = "swe",
-                                            timestep = "daily"
-                                            )
+  df_tmp_raw <- data_all %>%
+    dplyr::filter(id %in% stations)
+
   # ===========
   # Preprocessing
   # ===========
