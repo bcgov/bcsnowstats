@@ -6,7 +6,7 @@
 Depends on the SWE_normals() function to calculate normals
 January 2021, Ashlee Jollymore}
 \usage{
-snow_stats(data, normal_min, normal_max, data_id, force = FALSE)
+snow_stats(data, normal_min, normal_max, data_id, force = FALSE, ...)
 }
 \arguments{
 \item{data}{Data that you are calculating statistics for.}
