@@ -6,6 +6,7 @@
 January 2021, Ashlee Jollymore}
 \usage{
 aswe_get_stats(
+  data_all,
   stations,
   survey_period,
   get_year,
@@ -26,6 +27,8 @@ aswe_get_stats(
 \item{normal_max}{date of the max normal year}
 
 \item{force}{Whether to overwrite the cached normal data. Defaults to FALSE}
+
+\item{data}{Data for stations you want to get statistics for}
 }
 \description{
 Internal function for calculating quartiles and percentiles for each day for each site from automated sites; called within lapply function in stats_aswe() function
