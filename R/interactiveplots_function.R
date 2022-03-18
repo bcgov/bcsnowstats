@@ -34,7 +34,7 @@ get_swe <- function(id) {
                                  get_year = "All",
                                  normal_min = 1991,
                                  normal_max = 2020,
-                                 force = TRUE)
+                                 force = FALSE)
 
    # Round all numerics within data to the nearest whole number
    data_plot <- round_df(x = data_plot_1, digits = 0)
@@ -152,6 +152,696 @@ getSWE_current <- function(data){
 }
 
 # ================================================
+#' Function for formatting data and plotting. Internal function for use within plot_interactive_function (for looping over multiple sites)
+#' @param data_plot_1 entire dataset
+#' @param stn_id station ID you are plotting
+#' @param save whether to save or not
+#' @param path path that you want to save plots in
+#' @export
+#' @keywords internal
+#' @examples \dontrun{}
+plot_data <- function(data_plot_1, stn_id, save, path) {
+
+  # Get station name(s)
+  station_name <- bcsnowdata::snow_auto_location()$LOCATION_NAME[snow_auto_location()$LOCATION_ID %in% as.character(stn_id)]
+
+  df <- data_plot_1 %>%
+    dplyr::filter(id %in% stn_id) %>%
+    unique()
+
+  # Only run the analysis if there is any data available for the site!
+  if (dim(df)[1] > 1) {
+
+    # =================
+    # Historic data
+    # =================
+    data_historic_1 <- df %>%
+      dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
+      dplyr::ungroup() %>%
+      dplyr::select("date_utc", "mean_day", wr) %>%
+      dplyr::rename(daily_mean = mean_day) %>%
+      dplyr::mutate(date_utc = as.Date(date_utc)) %>%
+      dplyr::mutate(d_m_y = paste0(lubridate::day(date_utc), "-", lubridate::month(date_utc), "-", lubridate::year(date_utc))) %>%
+      dplyr::group_by(d_m_y) %>%
+      dplyr::select(date_utc, daily_mean, d_m_y, wr) %>%
+      dplyr::distinct(d_m_y, .keep_all = TRUE) %>%
+      dplyr::ungroup() %>%
+      dplyr::mutate(year = lubridate::year(date_utc)) %>%
+      dplyr::mutate(month = lubridate::month(date_utc))
+
+    # Fill in large gaps in data with NA so that plot doesn't connect lines
+    date_historic <- data.frame(as.Date(seq(min(data_historic_1$date_utc), max(data_historic_1$date_utc), by = 'day'))) %>%
+      dplyr::rename(date_utc = "as.Date.seq.min.data_historic_1.date_utc...max.data_historic_1.date_utc...")
+
+    d_historic_fill <- merge(data_historic_1, date_historic, all = TRUE) %>%
+      dplyr::mutate(year = lubridate::year(date_utc)) %>%
+      dplyr::mutate(month = lubridate::month(date_utc))
+
+    # Get the artificial date column to plot against the current year
+    d_historic <- d_historic_fill %>%
+      dplyr::group_by(wr) %>%
+      dplyr::mutate(year_art = ifelse(month >=10, (bcsnowdata::wtr_yr(Sys.Date())-1), bcsnowdata::wtr_yr(Sys.Date()))) %>%
+      dplyr::mutate(Date_art = as.Date(paste0(lubridate::day(date_utc), "-", lubridate::month(date_utc), "-", year_art),
+                                       format = "%d-%m-%Y")) %>%
+      dplyr::select(-year_art, -d_m_y, -month) %>%
+      dplyr::mutate(d_m = paste0(lubridate::day(date_utc), "-", lubridate::month(date_utc))) %>%
+      dplyr::filter(d_m != "29-2") %>%  # remove leap years
+      dplyr::ungroup() %>%
+      dplyr::rename(swe_mm = daily_mean) %>%
+      dplyr::select(-d_m) %>%
+      dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
+      dplyr::filter(wr < bcsnowdata::wtr_yr(Sys.Date())) %>%
+      dplyr::mutate(wr = as.factor(wr)) %>%
+      dplyr::mutate(year = as.factor(year)) %>%
+      dplyr::mutate(Date = format(date_utc, format = "%d-%b")) %>%
+      dplyr::mutate(date_utc = as.Date(date_utc)) %>%
+      dplyr::mutate(Date_art = as.Date(Date_art)) %>%
+      dplyr::arrange(desc(wr), date_utc) %>% # attempt to re-arrrange plots so that current years are first
+      dplyr::mutate(wr = factor(wr, levels = rev(levels(wr)))) %>% # reverse the order of years to have the most recent at the top
+      dplyr::mutate(wr_toplot = paste0("WY = ", wr))
+
+    # =================
+    # Calculate statistics for current year data
+    # =================
+    d_all_2 <- getSWE_all(data = df)
+
+    # =======================
+    # Smooth statistics with 5-day average
+    # =======================
+    # if the normal exists for stations with greater than 10 years of data. Lots of data means easier to calculate the stats
+    if (all(!is.na(d_all_2[d_all_2$variable == "Normal (1981-2010)",]$value)) && all(!is.null(d_all_2[d_all_2$variable == "Normal (1981-2010)",]$value))) {
+
+      # isolate stats and smooth with five day average
+      d_all_stats <- d_all_2 %>%
+        dplyr::filter(variable != 'Current Year')  %>%
+        dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
+        dplyr::arrange(variable, date_utc) %>%
+        dplyr::group_by(variable) %>%
+        dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats. Use na.approx to approximate NA values
+                                               width = 5,
+                                               FUN = mean,
+                                               align = "center",
+                                               fill = NA,
+                                               na.rm = T)) %>%
+        dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
+    } else if (all(is.na(d_all_2[d_all_2$variable == "Normal (1981-2010)",]$value)) || all(is.null(d_all_2[d_all_2$variable == "Normal (1981-2010)",]$value))) {
+
+      # Isolate stats and smooth with five day average
+      d_all_stats_t <- d_all_2 %>%
+        dplyr::filter(variable != "Current Year" & variable != "Normal (1981-2010)") %>% # remove the na normal variable for stations with less that 10 years of data
+        dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
+        dplyr::arrange(variable, date_utc) %>%
+        dplyr::group_by(variable) %>%
+        dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
+
+      firstNonNA <- min(which(!is.na(d_all_stats_t$value))) # first instance of NA data. Works only for the first varaible, but this trend is likely the same for all variables.
+
+      # If there is greater than 3 days missing at the beginning of each of the variables, need to remove leading NA values in order for 5-day moving average to work.
+      if (firstNonNA > 3 && !is.infinite(firstNonNA)) {
+
+        dftmp <- list()
+        for (l in 1:length(unique(d_all_stats_t$variable))) {
+
+          d_temp <- subset(d_all_stats_t, variable == unique(d_all_stats_t$variable)[l])
+
+          # First non-na value
+          firstNonNA <- min(which(!is.na(d_temp$value)))
+
+          # Look for instances of multiple NA values within the dataframe - trail of NA values at the end of the data
+          lastNA <- max(which(is.na(d_temp$value)))
+
+          # if the last value is NA, trim the NA values from the end
+          if (lastNA == dim(d_temp)[1]) {
+            NAs <- data.frame(Location = which(is.na(d_temp$value))) %>%
+              # Change
+              purrr::map_df(rev) %>%
+              dplyr::mutate(difference = c(NA, diff(Location)))
+
+            # First NA value of the tail of NA
+            first_na <- NAs$Location[(which(NAs$difference != -1)-1)[1]]
+
+            # trim the NA values from the end
+            d_temp_trim <- d_temp[c(-(first_na:lastNA)),]
+          } else {
+            d_temp_trim <- d_temp
+          }
+
+          dftmp[[l]] <- d_temp_trim[c(-(1:firstNonNA-1)),] %>%
+            dplyr::select(date_utc, variable, value) %>%
+            dplyr::group_by(variable) %>%
+            dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats
+                                                   width = 5,
+                                                   FUN = mean,
+                                                   align = "center",
+                                                   fill = NA,
+                                                   na.rm = T,
+                                                   partial = TRUE)) %>%
+            dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
+        }
+        roll_mean_data <- do.call("rbind.data.frame", dftmp)
+        # Merge the five day mean with the statistics
+        d_all_stats <- dplyr::full_join(d_all_2, roll_mean_data, by = c("date_utc", "variable", "value"))
+      } else {
+
+        # find only the variables without any entries. Filter out those that are all na (normals!)
+        d_check <- d_all_2 %>%
+          dplyr::group_by(variable) %>%
+          dplyr::summarise_each(~(sum(!is.na(.)))) %>%
+          dplyr::filter(value != 0) # filter out those variables without any entries
+
+        # isolate stats and smooth with five day average
+        d_all_stats <- d_all_2 %>%
+          dplyr::filter(variable %in% d_check$variable) %>% # get rid of variables that have all NA values
+          dplyr::filter(variable != 'Current Year')  %>% # Get rid of the current year data if it is there
+          dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
+          dplyr::arrange(variable, date_utc) %>% # arrange by varaible and date
+          dplyr::group_by(variable) %>%
+          dplyr::arrange(variable, date_utc) %>%
+          # dplyr::filter(!is.na(value)) %>% # Filter out the Na values.. will this work!
+          dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats; only fill in a max of 10
+                                                 width = 5,
+                                                 by=1,
+                                                 partial = TRUE,
+                                                 FUN = mean,
+                                                 align = "center",
+                                                 fill = NA,
+                                                 na.rm = T)) %>%
+          dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
+      }
+    } else {
+
+      # Isolate stats and smooth with five day average
+      d_all_stats_t <- d_all_2 %>%
+        dplyr::filter(variable != "Current Year") %>% # remove the na normal variable for stations with less that 10 years of data
+        dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
+        dplyr::arrange(variable, date_utc) %>%
+        dplyr::group_by(variable) %>%
+        dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
+
+      firstNonNA <- min(which(!is.na(d_all_stats_t$value))) # first instance of NA data. Works only for the first varaible, but this trend is liely the same for all variables.
+
+      # If there is greater than 3 days missing at the beginning of each of the variables, need to remove leading NA values in order for 5-day moving average to work.
+      if (firstNonNA > 3) {
+        dftmp <- list()
+        for (l in 1:length(unique(d_all_stats_t$variable))){
+
+          d_temp <- subset(d_all_stats_t, variable == unique(d_all_stats_t$variable)[l])
+
+          firstNonNA <- min(which(!is.na(d_temp$value)))
+
+          # Look for instances of multiple NA values within the dataframe - trail of NA values at the end of the data
+          lastNA <- max(which(is.na(d_temp$value)))
+
+          # if the last value is NA, trim the NA values from the end
+          if (lastNA == dim(d_temp)[1]) {
+            NAs <- data.frame(Location = which(is.na(d_temp$value))) %>%
+              # Change
+              purrr::map_df(rev) %>%
+              dplyr::mutate(difference = c(NA, diff(Location)))
+
+            # First NA value of the tail of NA
+            first_na <- NAs$Location[(which(NAs$difference != -1)-1)[1]]
+
+            # trim the NA values from the end
+            d_temp_trim <- d_temp[c(-(first_na:lastNA)),]
+          } else {
+            d_temp_trim <- d_temp
+          }
+
+          # Trim the leasing NA values and calculate the rolling 5-day mean
+          dftmp[[l]] <- d_temp_trim[c(-(1:firstNonNA-1)),] %>%
+            dplyr::select(date_utc, variable, value) %>%
+            dplyr::group_by(variable) %>%
+            dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats
+                                                   width = 5,
+                                                   FUN = mean,
+                                                   align = "center",
+                                                   fill = NA,
+                                                   na.rm = T,
+                                                   partial = TRUE)) %>%
+            dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
+        }
+        roll_mean_data <- do.call("rbind.data.frame", dftmp)
+        # Merge the five day mean with the statistics
+        d_all_stats <- dplyr::full_join(d_all_2, roll_mean_data, by = c("date_utc", "variable", "value"))
+      } else {
+        # isolate stats and smooth with five day average
+        d_all_stats <- d_all_stats_t %>%
+          dplyr::filter(variable != 'Current Year')  %>%
+          dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
+          dplyr::filter(!is.na(value)) %>% # get rid of NA data within stats
+          dplyr::arrange(variable, date_utc) %>%
+          dplyr::group_by(variable) %>%
+          dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats
+                                                 width = 5,
+                                                 FUN = mean,
+                                                 align = "center",
+                                                 fill = NA,
+                                                 na.rm = T)) %>%
+          dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
+      }
+    }
+
+    # isolate current year data with statistics
+    d_all_curr <- getSWE_current(data = df)
+
+    # Subset dates
+    min <- subset(d_all_stats, variable == c("min")) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(date_utc, value_5) %>%
+      dplyr::rename(min = value_5)
+    Q10 <- subset(d_all_stats, variable == c("Q10")) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(date_utc, value_5) %>%
+      dplyr::rename(Q10 = value_5)
+    Q25 <- subset(d_all_stats, variable == c("Q25")) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(date_utc, value_5) %>%
+      dplyr::rename(Q25 = value_5)
+    Q50 <- subset(d_all_stats, variable == c("Median")) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(date_utc, value_5) %>%
+      dplyr::rename(Q50 = value_5)
+    Q75 <- subset(d_all_stats, variable == c("Q75")) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(date_utc, value_5) %>%
+      dplyr::rename(Q75 = value_5)
+    Q90 <- subset(d_all_stats, variable == c("Q90")) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(date_utc, value_5) %>%
+      dplyr::rename(Q90 = value_5)
+    max <- subset(d_all_stats, variable == c("max")) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(date_utc, value_5) %>%
+      dplyr::rename(max = value_5)
+
+    # Arrange all the statistics to make the statistics bands in the plot
+    bands <- purrr::reduce(list(min, Q10, Q25, Q50, Q75, Q90, max), dplyr::left_join, by = "date_utc") %>%
+      dplyr::arrange(date_utc) %>%
+      dplyr::mutate(Date = format(date_utc, format = "%d-%b")) %>%
+      dplyr::filter(!is.na(max))
+
+    # plot the max and min
+    date_min <- as.Date(min(d_all_2$date_utc, na.rm = TRUE))
+    date_max <- as.Date(max(d_all_2$date_utc, na.rm = TRUE))
+
+    # Ensure all data rounded
+    bands <- round_df(bands, digits = 0) %>%
+      dplyr::arrange(date_utc)
+    d_historic <- round_df(d_historic, digits = 0)
+    d_all_curr <- round_df(d_all_curr, digits = 0)
+    d_all_stats <- round_df(d_all_stats, digits = 0)
+
+    # ============================
+    # Plot annotations
+    # ============================
+
+    # If the ID is 2F01AP, replace with the name
+    if (stn_id == "2F01AP") {
+      station_name = "Trout Creek West"
+    }
+
+    ## Calculate the days to peak snow normal. Partition if there is >50% of the normals present
+    # If there is a normal for the station and there is more that 50% of the data present, calculate statistics
+    if (sum(!is.na(df$normal_Q50)) / length(df$normal_Q50) > 0.5 && all(!is.null(df$normal_Q50))) {
+
+      norm_q50 <- subset(d_all_stats, variable == "Normal (1981-2010)")
+      date_max <- norm_q50$date_utc[norm_q50$value == max(norm_q50$value, na.rm = TRUE)]
+      days_till_peak <- as.Date(date_max[1]) - Sys.Date()
+
+      day_peak_1 <- norm_q50$date_utc[norm_q50$value == max(norm_q50$value, na.rm = TRUE)]
+      day_peak <- day_peak_1[!is.na(day_peak_1)]
+
+      ## Calculate percent of normal
+      percent_normal_mean <- paste0(as.numeric(df$percent_normal_mean[as.Date(df$date_utc) == Sys.Date()]), "%")
+
+      ## Percent of normal peak
+      percent_normal_peak <- round(d_all_curr$value[na.omit(d_all_curr$date_utc == Sys.Date())]/max(norm_q50$value_5, na.rm = TRUE) * 100, digits = 0)
+      percent_normal_peak <- paste0(percent_normal_peak, "%")
+
+      # Typical Percent of median peak for this date
+      typical_percentnorm <- round(norm_q50$value_5[na.omit(norm_q50$date_utc == Sys.Date())] / max(norm_q50$value_5, na.rm = TRUE)*100, digits = 0)
+      typical_percentnorm <- paste0(typical_percentnorm, "%")
+    } else if (all(is.null(df$Normal_Q50))) {
+
+      norm_q50 <- subset(d_all_stats, variable == "Normal (1981-2010)")
+      date_max <- "Insufficient data"
+      days_till_peak <- "Insufficient data"
+      day_peak <- "Insufficient data"
+      percent_normal_mean <- "Insufficient data"
+      percent_normal_peak <- "Insufficient data"
+      typical_percentnorm <- "Insufficient data"
+    }
+
+    # Percentile rank
+    percentile_today <- df$percentile[df$date_dmy == Sys.Date()]
+
+    # Percent of median
+    percent_median <- as.numeric(df$percent_Q50[df$date_dmy == Sys.Date()])
+
+    # Elevation
+    el_site <- data.frame(elevation()) %>%
+      dplyr::filter(Station_ID %in% stn_id) %>%
+      dplyr::select(Elevation)
+    el_site <- as.character(el_site)
+
+    # Year established
+    year_est <- min(as.numeric(as.character(d_historic$year)), na.rm = TRUE)
+
+    # Basin
+    basin <- gsub("([[:lower:]])([[:upper:]][[:lower:]])", "\\1 \\2", as.character(basin_name(stn_id, basin = "All")[1,1]))
+
+    # Owned by
+    meta_select <- meta %>%
+      dplyr::filter(ID == stn_id)
+
+    owned_by <- as.character(meta_select$OWNER[1])
+
+    # ======================
+    # get the increase in SWE from today's date to the max. Based on previous monthly change in SWE statistics
+    # ======================
+
+    lastday_data <- d_all_curr$date_utc[max(which(!is.na(d_all_curr$value)))]
+    date_peak <- day_peak[1]
+
+    if (class(date_peak) == "Date") { # if there is a calculated peak normal
+      deltaSWE <- deltaSWE_datetopeak(df, lastday_data, date_peak)
+    }
+
+    # ==========
+    # Check whether the peak SWE has passed. If it has, calculate: 1) Percent melted; 2) percent of current year peak SWE versus normal peak
+    # ==========
+    # Get peak SWE for this year
+    max_SWE_currentyear_1 <- d_all_curr %>%
+      dplyr::filter(!is.na(value))
+    max_SWE_currentyear <- max(max_SWE_currentyear_1$value)
+
+    if (all(is.na(max_SWE_currentyear_1$value))) {
+      peakstatus = "No data"
+      percentpeak_vs_norm = "No data"
+      percentpeak_vs_median = "No data" } else {
+
+        if (d_all_curr$value[max(which(!is.na(d_all_curr$value)))] < max_SWE_currentyear-30) {
+          peakstatus = "POST"
+
+          # Calculate the percent of the snowpack melted
+          percent_SWE_remaining <- round(d_all_curr$value[max(which(!is.na(d_all_curr$value)))]/max_SWE_currentyear, digits = 2)*100
+
+          # Calculate the percent of this year's peak versus peak normal and peak
+          percentpeak_vs_norm <- round(max_SWE_currentyear/max(norm_q50$value_5, na.rm = TRUE), digits = 2)*100
+          percentpeak_vs_median <- round(max_SWE_currentyear/max(na.omit(Q50$Q50)), digits = 2)*100
+        } else {
+          peakstatus = "PRE"
+          percent_SWE_remaining = 100
+          percentpeak_vs_norm <- "Before Peak"
+          percentpeak_vs_median <- "Before Peak"
+        }
+      }
+
+    # ======================
+    # plot the SWE across the entire period
+    # =======================
+    p <- plotly::plot_ly() %>%
+      plotly::add_ribbons(data = bands,
+                          x = bands$date_utc,
+                          ymax = bands$max,
+                          ymin = bands$Q90,
+                          fillcolor = list(color = colour_p()$colour_hex[9], opacity = 0),
+                          opacity = 0.2,
+                          line = list(color = colour_p()$colour_hex[9], opacity = 1, width = 2),
+                          name = 'Max - Q90') %>%
+      plotly::add_ribbons(data = bands,
+                          x = bands$date_utc,
+                          ymin = bands$Q75,
+                          ymax = bands$Q90,
+                          fillcolor = list(color = colour_p()$colour_hex[8], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[8], opacity = 1, width = 2),
+                          opacity = 0.2,
+                          name = 'Q90 - Q75') %>%
+      plotly::add_ribbons(data = bands,
+                          x = bands$date_utc,
+                          ymin = bands$Q50,
+                          ymax = bands$Q75,
+                          fillcolor = list(color = colour_p()$colour_hex[7], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[7], opacity = 1, width = 2),
+                          opacity = 0.2,
+                          name = 'Q75 - Q50') %>%
+      plotly::add_ribbons(data = bands,
+                          x = bands$date_utc,
+                          ymin = bands$Q25,
+                          ymax = bands$Q50,
+                          fillcolor = list(color = colour_p()$colour_hex[6], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[6], opacity = 1, width = 2),
+                          opacity = 0.5,
+                          name = 'Q50 - Q25') %>%
+      plotly::add_ribbons(data = bands,
+                          x = bands$date_utc,
+                          ymin = bands$Q10,
+                          ymax = bands$Q25,
+                          fillcolor = list(color = colour_p()$colour_hex[3], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[3], opacity = 1, width = 2),
+                          opacity = 0.2,
+                          name = 'Q25 - Q10') %>%
+      plotly::add_ribbons(data = bands,
+                          x = bands$date_utc,
+                          ymin = bands$min,
+                          ymax = bands$Q10,
+                          fillcolor = list(color = colour_p()$colour_hex[2], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[2], opacity = 1, width = 2),
+                          opacity = 0.2,
+                          name = 'Min - Q10') %>%
+      # stats
+      plotly::add_trace(data = subset(d_all_stats, variable == "max"), x = ~date_utc, y = ~as.numeric(value_5),
+                        legendgroup = 'Statistics (Max, Q75, Q25, Min)',
+                        showlegend = TRUE,
+                        type = 'scatter',
+                        mode = 'lines',
+                        connectgaps = FALSE,
+                        color = 'Stats (Max, Q75, Q25, Min)',
+                        line = list(color = "rgb(130,130,130)",
+                                    width = 2, dash = 'dashdot')) %>%
+      plotly::add_trace(data = subset(d_all_stats, variable == "min"), x = ~date_utc, y = ~as.numeric(value_5),
+                        legendgroup = 'Statistics (Max, Q75, Q25, Min)',
+                        showlegend = F,
+                        type = 'scatter',
+                        mode = 'lines',
+                        connectgaps = FALSE,
+                        #color = ~variable,
+                        line = list(color = "rgb(130,130,130)", width = 2, dash = 'dashdot')) %>%
+      plotly::add_trace(data = subset(d_all_stats, variable == "Q25"), x = ~date_utc, y = ~as.numeric(value_5),
+                        legendgroup = 'Statistics (Max, Q75, Q25, Min)',
+                        showlegend = F,
+                        type = 'scatter', mode = 'lines',
+                        connectgaps = FALSE,
+                        #color = ~variable,
+                        line = list(color = "rgb(153,204,255)",
+                                    width = 2, dash = 'dashdot')) %>%
+      plotly::add_trace(data = subset(d_all_stats, variable == "Q75"), x = ~date_utc, y = ~as.numeric(value_5),
+                        legendgroup = 'Statistics (Max, Q75, Q25, Min)',
+                        showlegend = F,
+                        type = 'scatter', mode = 'lines',
+                        connectgaps = FALSE,
+                        #color = ~variable,
+                        line = list(color = "rgb(153,204,255)",
+                                    width = 2, dash = 'dashdot')) %>%
+      plotly::layout(showlegend = T) %>%
+      plotly::add_trace(data = subset(d_all_stats, variable == "Normal (1981-2010)"), x = ~date_utc, y = ~as.numeric(value_5),
+                        type = 'scatter', mode = 'lines',
+                        connectgaps = FALSE,
+                        color = ~variable,
+                        line = list(color = colour_p()$colour_norm,
+                                    width = 2, dash = 'dash'))  %>% # normal
+      plotly::add_trace(data = subset(d_all_stats, variable == "Median"), x = ~date_utc, y = ~as.numeric(value_5),
+                        type = 'scatter', mode = 'lines',
+                        connectgaps = FALSE,
+                        color = ~variable,
+                        line = list(color = "rgb(130,130,130)",
+                                    width = 3, dash = 'dashdot'))  %>% # median (Q50)
+      # current year data
+      plotly::add_trace(data = d_all_curr, x = ~date_utc, y = ~value, type = 'scatter', mode = 'lines',
+                        connectgaps = FALSE,
+                        showlegend = TRUE,
+                        color = ~variable,
+                        line = list(color = "black", width = 4)
+      ) %>% # current year
+      # past year data
+      plotly::add_trace(data = d_historic,
+                        x = ~Date_art,
+                        y = ~swe_mm,
+                        type = 'scatter',
+                        mode = 'lines',
+                        connectgaps = FALSE,
+                        showlegend = TRUE,
+                        visible = "legendonly",
+                        name = ~wr,
+                        #color = ~wr,
+                        line = list(color = viridis::viridis(1000), width = 3)) %>%
+      plotly::layout(autosize = T,
+                     title = paste0('SWE (mm) for ', station_name, ", ", stn_id),
+                     margin = list(l=30, r=30, b=55, t=30, pad=0),
+                     xaxis = list(
+                       title = paste0(annotation()),
+                       titlefont = list(size=8),
+                       type = 'date',
+                       range = c(min(d_all_stats$date_utc), max(d_all_stats$date_utc)),
+                       tickformat = "%d-%B"),
+                     yaxis = list(title = 'SWE (mm)')) %>%
+      plotly::layout(annotations = list(
+        list(x = 0 , y = 1, text = paste0("Elevation (m): ", el_site, " | Owned by: ", owned_by, " | Year established: ", year_est, " | Basin = ", basin), showarrow = F, xref='paper', yref='paper'),
+        list(x = 0 , y = 0.98, text = paste0("Current % of normal (1981-2010): ", percent_normal_mean, " | Current % of median: ", percent_median), showarrow = F, xref='paper', yref='paper'),
+        list(x = 0 , y = 0.96, text = paste0("% of normal peak: ", percent_normal_peak, " | Typical % of peak accumulation for today: ", typical_percentnorm), showarrow = F, xref='paper', yref='paper'),
+        list(x = 0 , y = 0.94, text = paste0("Day of peak: ", day_peak[1], " | Days until normal peak: ", days_till_peak), showarrow = F, xref='paper', yref='paper'),
+        list(x = 0 , y = 0.92, text = paste0("Percentile Rank: ", percentile_today, "th"), showarrow = F, xref='paper', yref='paper'),
+        list(x = 0 , y = 0.90, text = paste0("*Statistics smoothed by 5-day average| Updated: ", Sys.Date()), showarrow = F, xref='paper', yref='paper')))
+
+
+    # Add statistics related to the post peak snow conditions
+    if (peakstatus == "POST") {
+      p <- p %>%
+        plotly::layout(annotations = list(
+          list(x = 0 , y = 0.88, text = paste0("Percent SWE Remaining from Peak: ", percent_SWE_remaining, "%"), showarrow = F, xref='paper', yref='paper'),
+          list(x = 0 , y = 0.86, text = paste0("Percent Year's Peak vs. Normal Peak: ", percentpeak_vs_norm, "% | Percent Year's Peak vs. Median Peak: ",
+                                               percentpeak_vs_median, "%"), showarrow = F, xref='paper', yref='paper')))
+    }
+
+    # Add the projections if they exist and the time is before the peak
+    if (exists("deltaSWE") && peakstatus == "PRE") {
+      if (dim(deltaSWE)[1] > 0) {
+        p <- p %>%
+          plotly::add_trace(data = deltaSWE,
+                            x = as.Date(deltaSWE$date_peak),
+                            y = as.numeric(deltaSWE$median),
+                            legendgroup = 'Projected SWE',
+                            type = 'scatter',
+                            mode = 'lines',
+                            color = "Projected SWE (Max, Q75, Median, Q25, Min)",
+                            showlegend = TRUE,
+                            visible = "legendonly",
+                            line = list(color = "black", width = 2)) %>%
+          plotly::add_trace(data = deltaSWE,
+                            x = as.Date(deltaSWE$date_peak),
+                            y = as.numeric(deltaSWE$MAX),
+                            legendgroup = 'Projected SWE',
+                            type = 'scatter',
+                            mode = 'lines',
+                            color = "max",
+                            showlegend = F, visible = "legendonly",
+                            line = list(color = "red", width = 2)) %>%
+          plotly::add_trace(data = deltaSWE,
+                            x = as.Date(deltaSWE$date_peak),
+                            y = as.numeric(deltaSWE$MIN),
+                            legendgroup = 'Projected SWE',
+                            type = 'scatter',
+                            mode = 'lines',
+                            color = "min",
+                            showlegend = F,
+                            visible = "legendonly",
+                            line = list(color = "blue", width = 2)) %>%
+          plotly::add_trace(data = deltaSWE,
+                            x = as.Date(deltaSWE$date_peak),
+                            y = as.numeric(deltaSWE$Q75),
+                            legendgroup = 'Projected SWE',
+                            type = 'scatter',
+                            mode = 'lines',
+                            color = "Q75",
+                            showlegend = F, visible = "legendonly",
+                            line = list(color = "orange", width = 2)) %>%
+          plotly::add_trace(data = deltaSWE,
+                            x = as.Date(deltaSWE$date_peak),
+                            y = as.numeric(deltaSWE$Q25),
+                            legendgroup = 'Projected SWE',
+                            type = 'scatter',
+                            mode = 'lines',
+                            color = "Q25",
+                            showlegend = F, visible = "legendonly",
+                            line = list(color = "light blue", width = 2)) %>%
+          plotly::layout(
+            showlegend = T, visible = "legendonly"
+          )
+      }
+    }
+
+    p <- plotly::partial_bundle(p) # make the size smaller
+
+    # Save if you have specified that you should save it
+    if (save %in% c("True", "true", "T", "TRUE", TRUE)) {
+      htmlwidgets::saveWidget(plotly::as_widget(p), paste0(path, "ASWE_", stn_id, ".html"),
+                              selfcontained = F, # for making the finished product smaller and faster to save
+                              libdir = NULL, # for making the finished product smaller and faster to save
+                              title = paste0("SWE ", stn_id))
+    }
+
+    # ======================
+    # Compile statistics to save in file for the map
+    # ======================
+    SWE_today <- d_all_curr$value[d_all_curr$date_utc == as.Date(Sys.Date())][1]
+
+    if (all(is.na(SWE_today))) { # If there is no current data to save, save an empty dataframe so it still shows up on the map
+      print("No current stats to save")
+
+      empty_df <- data.frame("id" = NA, "station_name" = NA, "el_site" = NA,
+                             "owned_by" = NA, "year_est" = NA, "basin" = NA,
+                             "SWE_today" = "No Data",
+                             "percent_median" = NA,
+                             "percentile_today" = NA,
+                             "percent_normal" = NA, "days_till_peak" = days_till_peak, "day_peak" = day_peak[1])
+      empty_df$id <- id
+      empty_df$station_name <- ifelse(length(station_name) > 0, station_name, NA)
+      empty_df$el_site <- el_site
+      empty_df$owned_by <- owned_by
+      empty_df$year_est <- year_est
+      empty_df$basin <- basin
+
+      stats_out <- empty_df
+    } else {
+      if (length(percent_median) == 0){percent_median = NA}
+      if (length(percentile_today) == 0){percentile_today = NA}
+
+      stats_out_i <- c(id, station_name, el_site, owned_by, year_est, basin, SWE_today, percent_median,
+                       percentile_today, percent_normal_mean, days_till_peak) %>%
+        tidyr::replace_na("no data")
+
+      stats_out_2 <- data.frame(t(data.frame(stats_out_i)), day_peak[1])
+      colnames(stats_out_2) <- c("id", "station_name", "el_site", "owned_by", "year_est", "basin", "SWE_today", "percent_median",
+                                 "percentile_today", "percent_normal_mean", "days_till_peak", "day_peak")
+      row.names(stats_out_2) <- c()
+
+      # Add in the density for today
+      snow_depth <- bcsnowdata::get_aswe_databc(station_id = stn_id,
+                                                get_year = bcsnowdata::wtr_yr(Sys.Date()),
+                                                parameter = "snow_depth",
+                                                timestep = "daily") %>%
+        dplyr::rename(SnowDepth_cm = value) %>%
+        dplyr::select(date_utc, SnowDepth_cm, id) %>%
+        dplyr::filter(date_utc == Sys.Date()) %>%# choose today's data
+        dplyr::distinct(SnowDepth_cm, .keep_all = TRUE)
+
+      # Calculate density
+      stats_out <- dplyr::full_join(stats_out_2, snow_depth, by = "id") %>%
+        dplyr::mutate(swe_mm = as.numeric(as.character(SWE_today))) %>%
+        dplyr::mutate(SWE_cm = swe_mm / 10) %>%
+        dplyr::mutate(density_cmcm = round(SWE_cm / SnowDepth_cm, digits = 2)) %>%
+        dplyr::mutate(density_cmcm = replace(density_cmcm, density_cmcm >1.0, ">1.0")) %>%
+        # Add in the post-peak SWE statistics
+        dplyr::mutate(percentSWE_remaining = percent_SWE_remaining) %>%
+        dplyr::mutate(percentpeak_vsnorm = percentpeak_vs_norm) %>%
+        dplyr::mutate(percentpeak_vsmedian = percentpeak_vs_median)
+    }
+
+    # Save statistics csv file
+    #if (save == "Yes") {
+    #   stats_path <- gsub("Interactive_plots/", "", path)
+    #   write.csv(stats_out, file = paste0(stats_path, "Stats/", id, ".csv"), row.names = FALSE)
+    # }
+
+    out <- (list("SWEplot" = p, "stats" = stats_out))
+  } else {
+    print("No data for site")
+    out <- NULL
+  }
+}
+
+# ================================================
 #' Interactive plots - ASWE sites (plot delta SWE and climate plots)
 #' @param path path that you want to save plots in
 #' @param id station ID that you want to plot SWE for
@@ -164,683 +854,18 @@ getSWE_current <- function(data){
 #' @examples \dontrun{}
 plot_interactive_aswe <- function (path, id, save = "No") {
 
- # Get statistics data for the site you are plotting
- data_plot_1 <- get_swe(id)
+  # Get statistics data for the site you are plotting
+  data_plot_1 <- get_swe(id)
 
- # Get station name
- station_name <- bcsnowdata::snow_auto_location()$LOCATION_NAME[snow_auto_location()$LOCATION_ID %in% as.character(id)]
 
- # Only run the analysis if there is any data available for the site!
- if (dim(data_plot_1)[1] > 1) {
+  # Run function over all sites that you have
+  plots <- lapply(id[2],
+                  plot_data,
+                  data_plot_1,
+                  save,
+                  path)
 
-  # =================
-  # Historic data
-  # =================
-  data_historic_1 <- data_plot_1 %>%
-   dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
-   dplyr::ungroup() %>%
-   dplyr::select("date_utc", "mean_day", wr) %>%
-   dplyr::rename(daily_mean = mean_day) %>%
-   dplyr::mutate(date_utc = as.Date(date_utc)) %>%
-   dplyr::mutate(d_m_y = paste0(lubridate::day(date_utc), "-", lubridate::month(date_utc), "-", lubridate::year(date_utc))) %>%
-   dplyr::group_by(d_m_y) %>%
-   dplyr::select(date_utc, daily_mean, d_m_y, wr) %>%
-   dplyr::distinct(d_m_y, .keep_all = TRUE) %>%
-   dplyr::ungroup() %>%
-   dplyr::mutate(year = lubridate::year(date_utc)) %>%
-   dplyr::mutate(month = lubridate::month(date_utc))
-
-  # Fill in large gaps in data with NA so that plot doesn't connect lines
-  date_historic <- data.frame(as.Date(seq(min(data_historic_1$date_utc), max(data_historic_1$date_utc), by = 'day'))) %>%
-   dplyr::rename(date_utc = "as.Date.seq.min.data_historic_1.date_utc...max.data_historic_1.date_utc...")
-
-  d_historic_fill <- merge(data_historic_1, date_historic, all = TRUE) %>%
-     dplyr::mutate(year = lubridate::year(date_utc)) %>%
-     dplyr::mutate(month = lubridate::month(date_utc))
-
-  # Get the artificial date column to plot against the current year
-  d_historic <- d_historic_fill %>%
-   dplyr::group_by(wr) %>%
-   dplyr::mutate(year_art = ifelse(month >=10, (bcsnowdata::wtr_yr(Sys.Date())-1), bcsnowdata::wtr_yr(Sys.Date()))) %>%
-   dplyr::mutate(Date_art = as.Date(paste0(lubridate::day(date_utc), "-", lubridate::month(date_utc), "-", year_art),
-         format = "%d-%m-%Y")) %>%
-   dplyr::select(-year_art, -d_m_y, -month) %>%
-   dplyr::mutate(d_m = paste0(lubridate::day(date_utc), "-", lubridate::month(date_utc))) %>%
-   dplyr::filter(d_m != "29-2") %>%  # remove leap years
-   dplyr::ungroup() %>%
-   dplyr::rename(swe_mm = daily_mean) %>%
-   dplyr::select(-d_m) %>%
-   dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
-   dplyr::filter(wr < bcsnowdata::wtr_yr(Sys.Date())) %>%
-   dplyr::mutate(wr = as.factor(wr)) %>%
-   dplyr::mutate(year = as.factor(year)) %>%
-   dplyr::mutate(Date = format(date_utc, format = "%d-%b")) %>%
-   dplyr::mutate(date_utc = as.Date(date_utc)) %>%
-   dplyr::mutate(Date_art = as.Date(Date_art)) %>%
-   dplyr::arrange(desc(wr), date_utc) %>% # attempt to re-arrrange plots so that current years are first
-   dplyr::mutate(wr = factor(wr, levels = rev(levels(wr)))) %>% # reverse the order of years to have the most recent at the top
-   dplyr::mutate(wr_toplot = paste0("WY = ", wr))
-
-  # =================
-  # Calculate statistics for current year data
-  # =================
-  d_all_2 <- getSWE_all(data = data_plot_1)
-
-  # =======================
-  # Smooth statistics with 5-day average
-  # =======================
-  # if the normal exists for stations with greater than 10 years of data. Lots of data means easier to calculate the stats
-  if (all(!is.na(d_all_2[d_all_2$variable == "Normal (1981-2010)",]$value)) && all(!is.null(d_all_2[d_all_2$variable == "Normal (1981-2010)",]$value))) {
-
-     # isolate stats and smooth with five day average
-     d_all_stats <- d_all_2 %>%
-      dplyr::filter(variable != 'Current Year')  %>%
-      dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
-      dplyr::arrange(variable, date_utc) %>%
-      dplyr::group_by(variable) %>%
-      dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats. Use na.approx to approximate NA values
-                             width = 5,
-                             FUN = mean,
-                             align = "center",
-                             fill = NA,
-                             na.rm = T)) %>%
-      dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
-  } else if (all(is.na(d_all_2[d_all_2$variable == "Normal (1981-2010)",]$value)) || all(is.null(d_all_2[d_all_2$variable == "Normal (1981-2010)",]$value))) {
-
-     # Isolate stats and smooth with five day average
-     d_all_stats_t <- d_all_2 %>%
-       dplyr::filter(variable != "Current Year" & variable != "Normal (1981-2010)") %>% # remove the na normal variable for stations with less that 10 years of data
-       dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
-       dplyr::arrange(variable, date_utc) %>%
-       dplyr::group_by(variable) %>%
-       dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
-
-     firstNonNA <- min(which(!is.na(d_all_stats_t$value))) # first instance of NA data. Works only for the first varaible, but this trend is likely the same for all variables.
-
-     # If there is greater than 3 days missing at the beginning of each of the variables, need to remove leading NA values in order for 5-day moving average to work.
-     if (firstNonNA > 3 && !is.infinite(firstNonNA)) {
-
-       dftmp <- list()
-       for (l in 1:length(unique(d_all_stats_t$variable))){
-
-        d_temp <- subset(d_all_stats_t, variable == unique(d_all_stats_t$variable)[l])
-
-        # First non-na value
-        firstNonNA <- min(which(!is.na(d_temp$value)))
-
-        # Look for instances of multiple NA values within the dataframe - trail of NA values at the end of the data
-        lastNA <- max(which(is.na(d_temp$value)))
-
-        # if the last value is NA, trim the NA values from the end
-        if (lastNA == dim(d_temp)[1]) {
-           NAs <- data.frame(Location = which(is.na(d_temp$value))) %>%
-              # Change
-              purrr::map_df(rev) %>%
-             dplyr::mutate(difference = c(NA, diff(Location)))
-
-           # First NA value of the tail of NA
-           first_na <- NAs$Location[(which(NAs$difference != -1)-1)[1]]
-
-           # trim the NA values from the end
-           d_temp_trim <- d_temp[c(-(first_na:lastNA)),]
-        } else {
-           d_temp_trim <- d_temp
-        }
-
-        dftmp[[l]] <- d_temp_trim[c(-(1:firstNonNA-1)),] %>%
-          dplyr::select(date_utc, variable, value) %>%
-          dplyr::group_by(variable) %>%
-          dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats
-                                   width = 5,
-                                   FUN = mean,
-                                   align = "center",
-                                   fill = NA,
-                                   na.rm = T,
-                                   partial = TRUE)) %>%
-          dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
-       }
-      roll_mean_data <- do.call("rbind.data.frame", dftmp)
-      # Merge the five day mean with the statistics
-      d_all_stats <- dplyr::full_join(d_all_2, roll_mean_data, by = c("date_utc", "variable", "value"))
-     } else {
-
-     # find only the variables without any entries. Filter out those that are all na (normals!)
-     d_check <- d_all_2 %>%
-       dplyr::group_by(variable) %>%
-       dplyr::summarise_each(~(sum(!is.na(.)))) %>%
-       dplyr::filter(value != 0) # filter out those variables without any entries
-
-     # isolate stats and smooth with five day average
-     d_all_stats <- d_all_2 %>%
-       dplyr::filter(variable %in% d_check$variable) %>% # get rid of variables that have all NA values
-       dplyr::filter(variable != 'Current Year')  %>% # Get rid of the current year data if it is there
-       dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
-       dplyr::arrange(variable, date_utc) %>% # arrange by varaible and date
-       dplyr::group_by(variable) %>%
-       dplyr::arrange(variable, date_utc) %>%
-       # dplyr::filter(!is.na(value)) %>% # Filter out the Na values.. will this work!
-       dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats; only fill in a max of 10
-                                         width = 5,
-                                         by=1,
-                                         partial = TRUE,
-                                         FUN = mean,
-                                         align = "center",
-                                         fill = NA,
-                                         na.rm = T)) %>%
-       dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
-     }
-   } else {
-
-      # Isolate stats and smooth with five day average
-      d_all_stats_t <- d_all_2 %>%
-       dplyr::filter(variable != "Current Year") %>% # remove the na normal variable for stations with less that 10 years of data
-       dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
-       dplyr::arrange(variable, date_utc) %>%
-       dplyr::group_by(variable) %>%
-       dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
-
-      firstNonNA <- min(which(!is.na(d_all_stats_t$value))) # first instance of NA data. Works only for the first varaible, but this trend is liely the same for all variables.
-
-      # If there is greater than 3 days missing at the beginning of each of the variables, need to remove leading NA values in order for 5-day moving average to work.
-      if (firstNonNA > 3) {
-       dftmp <- list()
-       for (l in 1:length(unique(d_all_stats_t$variable))){
-
-         d_temp <- subset(d_all_stats_t, variable == unique(d_all_stats_t$variable)[l])
-
-         firstNonNA <- min(which(!is.na(d_temp$value)))
-
-         # Look for instances of multiple NA values within the dataframe - trail of NA values at the end of the data
-         lastNA <- max(which(is.na(d_temp$value)))
-
-         # if the last value is NA, trim the NA values from the end
-         if (lastNA == dim(d_temp)[1]) {
-            NAs <- data.frame(Location = which(is.na(d_temp$value))) %>%
-               # Change
-               purrr::map_df(rev) %>%
-               dplyr::mutate(difference = c(NA, diff(Location)))
-
-            # First NA value of the tail of NA
-            first_na <- NAs$Location[(which(NAs$difference != -1)-1)[1]]
-
-            # trim the NA values from the end
-            d_temp_trim <- d_temp[c(-(first_na:lastNA)),]
-         } else {
-            d_temp_trim <- d_temp
-         }
-
-         # Trim the leasing NA values and calculate the rolling 5-day mean
-         dftmp[[l]] <- d_temp_trim[c(-(1:firstNonNA-1)),] %>%
-           dplyr::select(date_utc, variable, value) %>%
-           dplyr::group_by(variable) %>%
-           dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats
-                                           width = 5,
-                                           FUN = mean,
-                                           align = "center",
-                                           fill = NA,
-                                           na.rm = T,
-                                           partial = TRUE)) %>%
-           dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
-       }
-       roll_mean_data <- do.call("rbind.data.frame", dftmp)
-       # Merge the five day mean with the statistics
-       d_all_stats <- dplyr::full_join(d_all_2, roll_mean_data, by = c("date_utc", "variable", "value"))
-     } else {
-       # isolate stats and smooth with five day average
-       d_all_stats <- d_all_stats_t %>%
-         dplyr::filter(variable != 'Current Year')  %>%
-         dplyr::filter(!is.na(date_utc)) %>% # get rid of leap year data
-         dplyr::filter(!is.na(value)) %>% # get rid of NA data within stats
-         dplyr::arrange(variable, date_utc) %>%
-         dplyr::group_by(variable) %>%
-         dplyr::mutate(value_5 = zoo::rollapply(data = zoo::na.approx(value), # fill in missing data within the stats
-                                         width = 5,
-                                         FUN = mean,
-                                         align = "center",
-                                         fill = NA,
-                                         na.rm = T)) %>%
-         dplyr::mutate(Date = format(date_utc, format = "%d-%b"))
-     }
-   }
-
- # isolate current year data with statistics
- d_all_curr <- getSWE_current(data = data_plot_1)
-
- # Subset dates
- min <- subset(d_all_stats, variable == c("min")) %>%
-   dplyr::ungroup() %>%
-   dplyr::select(date_utc, value_5) %>%
-   dplyr::rename(min = value_5)
- Q10 <- subset(d_all_stats, variable == c("Q10")) %>%
-   dplyr::ungroup() %>%
-   dplyr::select(date_utc, value_5) %>%
-   dplyr::rename(Q10 = value_5)
- Q25 <- subset(d_all_stats, variable == c("Q25")) %>%
-   dplyr::ungroup() %>%
-   dplyr::select(date_utc, value_5) %>%
-   dplyr::rename(Q25 = value_5)
- Q50 <- subset(d_all_stats, variable == c("Median")) %>%
-   dplyr::ungroup() %>%
-   dplyr::select(date_utc, value_5) %>%
-   dplyr::rename(Q50 = value_5)
- Q75 <- subset(d_all_stats, variable == c("Q75")) %>%
-   dplyr::ungroup() %>%
-   dplyr::select(date_utc, value_5) %>%
-   dplyr::rename(Q75 = value_5)
- Q90 <- subset(d_all_stats, variable == c("Q90")) %>%
-   dplyr::ungroup() %>%
-   dplyr::select(date_utc, value_5) %>%
-   dplyr::rename(Q90 = value_5)
- max <- subset(d_all_stats, variable == c("max")) %>%
-   dplyr::ungroup() %>%
-   dplyr::select(date_utc, value_5) %>%
-   dplyr::rename(max = value_5)
-
- # Arrange all the statistics to make the statistics bands in the plot
- bands <- purrr::reduce(list(min, Q10, Q25, Q50, Q75, Q90, max), dplyr::left_join, by = "date_utc") %>%
-   dplyr::arrange(date_utc) %>%
-   dplyr::mutate(Date = format(date_utc, format = "%d-%b")) %>%
-   dplyr::filter(!is.na(max))
-
- # plot the max and min
- date_min <- as.Date(min(d_all_2$date_utc, na.rm = TRUE))
- date_max <- as.Date(max(d_all_2$date_utc, na.rm = TRUE))
-
- # Ensure all data rounded
- bands <- round_df(bands, digits = 0) %>%
-   dplyr::arrange(date_utc)
- d_historic <- round_df(d_historic, digits = 0)
- d_all_curr <- round_df(d_all_curr, digits = 0)
- d_all_stats <- round_df(d_all_stats, digits = 0)
-
- # ============================
- # Plot annotations
- # ============================
-
- # If the ID is 2F01AP, replace with the name
- if (id == "2F01AP"){
-   station_name = "Trout Creek West"
- }
-
- ## Calculate the days to peak snow normal. Partition if there is >50% of the normals present
- # If there is a normal for the station and there is more that 50% of the data present, calculate statistics
- if (sum(!is.na(data_plot_1$normal_Q50)) / length(data_plot_1$normal_Q50) > 0.5 && all(!is.null(data_plot_1$normal_Q50))) {
-
-  norm_q50 <- subset(d_all_stats, variable == "Normal (1981-2010)")
-  date_max <- norm_q50$date_utc[norm_q50$value == max(norm_q50$value, na.rm = TRUE)]
-  days_till_peak <- as.Date(date_max[1]) - Sys.Date()
-
-  day_peak_1 <- norm_q50$date_utc[norm_q50$value == max(norm_q50$value, na.rm = TRUE)]
-  day_peak <- day_peak_1[!is.na(day_peak_1)]
-
-  ## Calculate percent of normal
-  percent_normal_mean <- paste0(data_plot_1$percent_normal_mean[data_plot_1$date_utc == Sys.Date()][1], "%")
-
-  ## Percent of normal peak
-  percent_normal_peak <- round(d_all_curr$value[na.omit(d_all_curr$date_utc == Sys.Date())]/max(norm_q50$value_5, na.rm = TRUE) * 100, digits = 0)
-  percent_normal_peak <- paste0(percent_normal_peak, "%")
-
-  # Typical Percent of median peak for this date
-  typical_percentnorm <- round(norm_q50$value_5[na.omit(norm_q50$date_utc == Sys.Date())] / max(norm_q50$value_5, na.rm = TRUE)*100, digits = 0)
-  typical_percentnorm <- paste0(typical_percentnorm, "%")
-  } else if (all(is.null(data_plot_1$Normal_Q50))){
-
-  norm_q50 <- subset(d_all_stats, variable == "Normal (1981-2010)")
-  date_max <- "Insufficient data"
-  days_till_peak <- "Insufficient data"
-  day_peak <- "Insufficient data"
-  percent_normal_mean <- "Insufficient data"
-  percent_normal_peak <- "Insufficient data"
-  typical_percentnorm <- "Insufficient data"
-  }
-
- # Percentile rank
- percentile_today <- data_plot_1$percentile[data_plot_1$date_dmy == Sys.Date()]
-
- # Percent of median
- percent_median <- data_plot_1$percent_Q50[data_plot_1$date_dmy == Sys.Date()]
-
- # Elevation
- el_site <- data.frame(elevation()) %>%
-   dplyr::filter(Station_ID %in% id) %>%
-   dplyr::select(Elevation)
- el_site <- as.character(el_site)
-
- # Year established
- year_est <- min(as.numeric(as.character(d_historic$year)), na.rm = TRUE)
-
- # Basin
- basin <- basin_name(id, basin = "All")
- basin <- gsub("([[:lower:]])([[:upper:]][[:lower:]])", "\\1 \\2", as.character(basin[1,1]))
-
- # Owned by
- meta_select <- meta %>%
-   dplyr::filter(ID == id)
-
- owned_by <- as.character(meta_select$OWNER[1])
-
- # ======================
- # get the increase in SWE from today's date to the max. Based on previous monthly change in SWE statistics
- # ======================
-
- lastday_data <- d_all_curr$date_utc[max(which(!is.na(d_all_curr$value)))]
- date_peak <- day_peak[1]
-
- if (class(date_peak) == "Date"){ # if there is a calculated peak normal
-  deltaSWE <- deltaSWE_datetopeak(data_plot_1, lastday_data, date_peak)
- }
-
- # ==========
- # Check whether the peak SWE has passed. If it has, calculate: 1) Percent melted; 2) percent of current year peak SWE versus normal peak
- # ==========
- # Get peak SWE for this year
- max_SWE_currentyear_1 <- d_all_curr %>%
-   dplyr::filter(!is.na(value))
- max_SWE_currentyear <- max(max_SWE_currentyear_1$value)
-
- if (all(is.na(max_SWE_currentyear_1$value))){
-   peakstatus = "No data"
-   percentpeak_vs_norm = "No data"
-   percentpeak_vs_median = "No data" } else {
-
-  if (d_all_curr$value[max(which(!is.na(d_all_curr$value)))] < max_SWE_currentyear-30) {
-   peakstatus = "POST"
-
-   # Calculate the percent of the snowpack melted
-   percent_SWE_remaining <- round(d_all_curr$value[max(which(!is.na(d_all_curr$value)))]/max_SWE_currentyear, digits = 2)*100
-
-   # Calculate the percent of this year's peak versus peak normal and peak
-   percentpeak_vs_norm <- round(max_SWE_currentyear/max(norm_q50$value_5, na.rm = TRUE), digits = 2)*100
-   percentpeak_vs_median <- round(max_SWE_currentyear/max(na.omit(Q50$Q50)), digits = 2)*100
-  } else {
-   peakstatus = "PRE"
-
-   percent_SWE_remaining = 100
-   percentpeak_vs_norm <- "Before Peak"
-   percentpeak_vs_median <- "Before Peak"
-  }
- }
-
- # ======================
- # plot the SWE across the entire period
- # =======================
- p <- plotly::plot_ly() %>%
-  plotly::add_ribbons(data = bands,
-              x = bands$date_utc,
-              ymax = bands$max,
-              ymin = bands$Q90,
-              fillcolor = list(color = colour_p()$colour_hex[9], opacity = 0),
-              opacity = 0.2,
-              line = list(color = colour_p()$colour_hex[9], opacity = 1, width = 2),
-              name = 'Max - Q90') %>%
-   plotly::add_ribbons(data = bands,
-               x = bands$date_utc,
-               ymin = bands$Q75,
-               ymax = bands$Q90,
-               fillcolor = list(color = colour_p()$colour_hex[8], opacity = 0.9),
-               line = list(color = colour_p()$colour_hex[8], opacity = 1, width = 2),
-               opacity = 0.2,
-               name = 'Q90 - Q75') %>%
-   plotly::add_ribbons(data = bands,
-               x = bands$date_utc,
-               ymin = bands$Q50,
-               ymax = bands$Q75,
-               fillcolor = list(color = colour_p()$colour_hex[7], opacity = 0.9),
-               line = list(color = colour_p()$colour_hex[7], opacity = 1, width = 2),
-               opacity = 0.2,
-               name = 'Q75 - Q50') %>%
-   plotly::add_ribbons(data = bands,
-               x = bands$date_utc,
-               ymin = bands$Q25,
-               ymax = bands$Q50,
-               fillcolor = list(color = colour_p()$colour_hex[6], opacity = 0.9),
-               line = list(color = colour_p()$colour_hex[6], opacity = 1, width = 2),
-               opacity = 0.5,
-               name = 'Q50 - Q25') %>%
-   plotly::add_ribbons(data = bands,
-               x = bands$date_utc,
-               ymin = bands$Q10,
-               ymax = bands$Q25,
-               fillcolor = list(color = colour_p()$colour_hex[3], opacity = 0.9),
-               line = list(color = colour_p()$colour_hex[3], opacity = 1, width = 2),
-               opacity = 0.2,
-               name = 'Q25 - Q10') %>%
-   plotly::add_ribbons(data = bands,
-               x = bands$date_utc,
-               ymin = bands$min,
-               ymax = bands$Q10,
-               fillcolor = list(color = colour_p()$colour_hex[2], opacity = 0.9),
-               line = list(color = colour_p()$colour_hex[2], opacity = 1, width = 2),
-               opacity = 0.2,
-               name = 'Min - Q10') %>%
-  # stats
-  plotly::add_trace(data = subset(d_all_stats, variable == "max"), x = ~date_utc, y = ~as.numeric(value_5),
-            legendgroup = 'Statistics (Max, Q75, Q25, Min)',
-            showlegend = TRUE,
-            type = 'scatter',
-            mode = 'lines',
-            connectgaps = FALSE,
-            color = 'Stats (Max, Q75, Q25, Min)',
-            line = list(color = "rgb(130,130,130)",
-            width = 2, dash = 'dashdot')) %>%
-  plotly::add_trace(data = subset(d_all_stats, variable == "min"), x = ~date_utc, y = ~as.numeric(value_5),
-            legendgroup = 'Statistics (Max, Q75, Q25, Min)',
-            showlegend = F,
-            type = 'scatter',
-            mode = 'lines',
-            connectgaps = FALSE,
-            #color = ~variable,
-            line = list(color = "rgb(130,130,130)", width = 2, dash = 'dashdot')) %>%
-  plotly::add_trace(data = subset(d_all_stats, variable == "Q25"), x = ~date_utc, y = ~as.numeric(value_5),
-            legendgroup = 'Statistics (Max, Q75, Q25, Min)',
-            showlegend = F,
-            type = 'scatter', mode = 'lines',
-            connectgaps = FALSE,
-            #color = ~variable,
-            line = list(color = "rgb(153,204,255)",
-            width = 2, dash = 'dashdot')) %>%
-  plotly::add_trace(data = subset(d_all_stats, variable == "Q75"), x = ~date_utc, y = ~as.numeric(value_5),
-            legendgroup = 'Statistics (Max, Q75, Q25, Min)',
-            showlegend = F,
-            type = 'scatter', mode = 'lines',
-            connectgaps = FALSE,
-            #color = ~variable,
-            line = list(color = "rgb(153,204,255)",
-            width = 2, dash = 'dashdot')) %>%
-  plotly::layout(showlegend = T) %>%
-  plotly::add_trace(data = subset(d_all_stats, variable == "Normal (1981-2010)"), x = ~date_utc, y = ~as.numeric(value_5),
-            type = 'scatter', mode = 'lines',
-            connectgaps = FALSE,
-            color = ~variable,
-            line = list(color = colour_p()$colour_norm,
-            width = 2, dash = 'dash'))  %>% # normal
-  plotly::add_trace(data = subset(d_all_stats, variable == "Median"), x = ~date_utc, y = ~as.numeric(value_5),
-            type = 'scatter', mode = 'lines',
-            connectgaps = FALSE,
-            color = ~variable,
-            line = list(color = "rgb(130,130,130)",
-            width = 3, dash = 'dashdot'))  %>% # median (Q50)
-  # current year data
-  plotly::add_trace(data = d_all_curr, x = ~date_utc, y = ~value, type = 'scatter', mode = 'lines',
-            connectgaps = FALSE,
-            showlegend = TRUE,
-            color = ~variable,
-            line = list(color = "black", width = 4)
-            ) %>% # current year
-  # past year data
-  plotly::add_trace(data = d_historic,
-            x = ~Date_art,
-            y = ~swe_mm,
-            type = 'scatter',
-            mode = 'lines',
-            connectgaps = FALSE,
-            showlegend = TRUE,
-            visible = "legendonly",
-            name = ~wr,
-            #color = ~wr,
-            line = list(color = viridis::viridis(1000), width = 3)) %>%
-   plotly::layout(autosize = T,
-         title = paste0('SWE (mm) for ', station_name, ", ", id),
-         margin = list(l=30, r=30, b=55, t=30, pad=0),
-         xaxis = list(
-           title = paste0(annotation()),
-           titlefont = list(size=8),
-           type = 'date',
-           range = c(min(d_all_stats$date_utc), max(d_all_stats$date_utc)),
-           tickformat = "%d-%B"),
-         yaxis = list(title = 'SWE (mm)')) %>%
-   plotly::layout(annotations = list(
-    list(x = 0 , y = 1, text = paste0("Elevation (m): ", el_site, " | Owned by: ", owned_by, " | Year established: ", year_est, " | Basin = ", basin), showarrow = F, xref='paper', yref='paper'),
-    list(x = 0 , y = 0.98, text = paste0("Current % of normal (1981-2010): ", percent_normal_mean, " | Current % of median: ", percent_median), showarrow = F, xref='paper', yref='paper'),
-    list(x = 0 , y = 0.96, text = paste0("% of normal peak: ", percent_normal_peak, " | Typical % of peak accumulation for today: ", typical_percentnorm), showarrow = F, xref='paper', yref='paper'),
-    list(x = 0 , y = 0.94, text = paste0("Day of peak: ", day_peak[1], " | Days until normal peak: ", days_till_peak), showarrow = F, xref='paper', yref='paper'),
-    list(x = 0 , y = 0.92, text = paste0("Percentile Rank: ", percentile_today, "th"), showarrow = F, xref='paper', yref='paper'),
-    list(x = 0 , y = 0.90, text = paste0("*Statistics smoothed by 5-day average| Updated: ", Sys.Date()), showarrow = F, xref='paper', yref='paper')))
-
-
- # Add statistics related to the post peak snow conditions
- if (peakstatus == "POST") {
-   p <- p %>%
-     plotly::layout(annotations = list(
-       list(x = 0 , y = 0.88, text = paste0("Percent SWE Remaining from Peak: ", percent_SWE_remaining, "%"), showarrow = F, xref='paper', yref='paper'),
-       list(x = 0 , y = 0.86, text = paste0("Percent Year's Peak vs. Normal Peak: ", percentpeak_vs_norm, "% | Percent Year's Peak vs. Median Peak: ",
-                                            percentpeak_vs_median, "%"), showarrow = F, xref='paper', yref='paper')))
- }
-
- # Add the projections if they exist and the time is before the peak
- if (exists("deltaSWE") && peakstatus == "PRE") {
-    if (dim(deltaSWE)[1] > 0) {
-    p <- p %>%
-      plotly::add_trace(data = deltaSWE,
-           x = as.Date(deltaSWE$date_peak),
-           y = as.numeric(deltaSWE$median),
-           legendgroup = 'Projected SWE',
-           type = 'scatter',
-           mode = 'lines',
-           color = "Projected SWE (Max, Q75, Median, Q25, Min)",
-           showlegend = TRUE,
-           visible = "legendonly",
-           line = list(color = "black", width = 2)) %>%
-      plotly::add_trace(data = deltaSWE,
-              x = as.Date(deltaSWE$date_peak),
-              y = as.numeric(deltaSWE$MAX),
-              legendgroup = 'Projected SWE',
-              type = 'scatter',
-              mode = 'lines',
-              color = "max",
-              showlegend = F, visible = "legendonly",
-              line = list(color = "red", width = 2)) %>%
-      plotly::add_trace(data = deltaSWE,
-              x = as.Date(deltaSWE$date_peak),
-              y = as.numeric(deltaSWE$MIN),
-              legendgroup = 'Projected SWE',
-              type = 'scatter',
-              mode = 'lines',
-              color = "min",
-              showlegend = F,
-              visible = "legendonly",
-              line = list(color = "blue", width = 2)) %>%
-      plotly::add_trace(data = deltaSWE,
-              x = as.Date(deltaSWE$date_peak),
-              y = as.numeric(deltaSWE$Q75),
-              legendgroup = 'Projected SWE',
-              type = 'scatter',
-              mode = 'lines',
-              color = "Q75",
-              showlegend = F, visible = "legendonly",
-              line = list(color = "orange", width = 2)) %>%
-      plotly::add_trace(data = deltaSWE,
-              x = as.Date(deltaSWE$date_peak),
-              y = as.numeric(deltaSWE$Q25),
-              legendgroup = 'Projected SWE',
-              type = 'scatter',
-              mode = 'lines',
-              color = "Q25",
-              showlegend = F, visible = "legendonly",
-              line = list(color = "light blue", width = 2)) %>%
-      plotly::layout(
-          showlegend = T, visible = "legendonly"
-       )
-    }
- }
-
- p <- plotly::partial_bundle(p) # make the size smaller
-
- # Save if you have specified that you should save it
- if (save %in% c("True", "true", "T", "TRUE", TRUE)) {
-  htmlwidgets::saveWidget(plotly::as_widget(p), paste0(path, "ASWE_", id, ".html"),
-                          selfcontained = F, # for making the finised product smaller and faster to save
-                          libdir = NULL, # for making the finised product smaller and faster to save
-                          title = paste0("SWE ", id))
- }
-
- # ======================
- # Compile statistics to save in file for the map
- # ======================
- SWE_today <- d_all_curr$value[d_all_curr$date_utc == as.Date(Sys.Date())][1]
-
- if (all(is.na(SWE_today))) { # If there is no current data to save, save an empty dataframe so it still shows up on the map
-   print("No current stats to save")
-
-   empty_df <- data.frame("id" = NA, "station_name" = NA, "el_site" = NA,
-                           "owned_by" = NA, "year_est" = NA, "basin" = NA,
-                          "SWE_today" = "No Data",
-                          "percent_median" = NA,
-                           "percentile_today" = NA,
-                           "percent_normal" = NA, "days_till_peak" = days_till_peak, "day_peak" = day_peak[1])
-   empty_df$id <- id
-   empty_df$station_name <- ifelse(length(station_name) > 0, station_name, NA)
-   empty_df$el_site <- el_site
-   empty_df$owned_by <- owned_by
-   empty_df$year_est <- year_est
-   empty_df$basin <- basin
-
-   stats_out <- empty_df
- } else {
-  if (length(percent_median) == 0){percent_median = NA}
-  if (length(percentile_today) == 0){percentile_today = NA}
-
-  stats_out_i <- c(id, station_name, el_site, owned_by, year_est, basin, SWE_today, percent_median,
-                  percentile_today, percent_normal_mean, days_till_peak) %>%
-   tidyr::replace_na("no data")
-
-  stats_out_2 <- data.frame(t(data.frame(stats_out_i)), day_peak[1])
-  colnames(stats_out_2) <- c("id", "station_name", "el_site", "owned_by", "year_est", "basin", "SWE_today", "percent_median",
-                            "percentile_today", "percent_normal_mean", "days_till_peak", "day_peak")
-  row.names(stats_out_2) <- c()
-
-  # Add in the density for today
-  snow_depth <- bcsnowdata::get_aswe_databc(station_id = id,
-                               get_year = "All",
-                               parameter = "snow_depth",
-                               timestep = "daily") %>%
-    dplyr::rename(SnowDepth_cm = value) %>%
-    dplyr::select(date_utc, SnowDepth_cm, id) %>%
-    dplyr::filter(date_utc == Sys.Date()) %>%# choose today's data
-    dplyr::distinct(SnowDepth_cm, .keep_all = TRUE)
-
-  # Calculate density
-  stats_out <- dplyr::full_join(stats_out_2, snow_depth, by = "id") %>%
-    dplyr::mutate(swe_mm = as.numeric(as.character(SWE_today))) %>%
-    dplyr::mutate(SWE_cm = swe_mm / 10) %>%
-    dplyr::mutate(density_cmcm = round(SWE_cm / SnowDepth_cm, digits = 2)) %>%
-    dplyr::mutate(density_cmcm = replace(density_cmcm, density_cmcm >1.0, ">1.0")) %>%
-    # Add in the post-peak SWE statistics
-    dplyr::mutate(percentSWE_remaining = percent_SWE_remaining) %>%
-    dplyr::mutate(percentpeak_vsnorm = percentpeak_vs_norm) %>%
-    dplyr::mutate(percentpeak_vsmedian = percentpeak_vs_median)
- }
-
- # Save statistics csv file
- #if (save == "Yes") {
-#   stats_path <- gsub("Interactive_plots/", "", path)
-#   write.csv(stats_out, file = paste0(stats_path, "Stats/", id, ".csv"), row.names = FALSE)
-# }
-
- return(list("SWEplot" = p, "stats" = stats_out))
- } else {
-   print("No data for site")
- }
+  return(plots)
 }
 
 # ================
