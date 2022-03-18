@@ -160,13 +160,13 @@ getSWE_current <- function(data){
 #' @export
 #' @keywords internal
 #' @examples \dontrun{}
-plot_data <- function(data_plot_1, stn_id, save, path) {
+plot_function <- function(stn_id, data_plot_1, save, path) {
 
   # Get station name(s)
   station_name <- bcsnowdata::snow_auto_location()$LOCATION_NAME[snow_auto_location()$LOCATION_ID %in% as.character(stn_id)]
 
   df <- data_plot_1 %>%
-    dplyr::filter(id %in% stn_id) %>%
+    dplyr::filter(id == as.character(stn_id)) %>%
     unique()
 
   # Only run the analysis if there is any data available for the site!
@@ -482,7 +482,7 @@ plot_data <- function(data_plot_1, stn_id, save, path) {
       # Typical Percent of median peak for this date
       typical_percentnorm <- round(norm_q50$value_5[na.omit(norm_q50$date_utc == Sys.Date())] / max(norm_q50$value_5, na.rm = TRUE)*100, digits = 0)
       typical_percentnorm <- paste0(typical_percentnorm, "%")
-    } else if (all(is.null(df$Normal_Q50))) {
+    } else if (all(is.null(df$normal_Q50)) | all(is.na(df$normal_Q50))) {
 
       norm_q50 <- subset(d_all_stats, variable == "Normal (1981-2010)")
       date_max <- "Insufficient data"
@@ -785,7 +785,7 @@ plot_data <- function(data_plot_1, stn_id, save, path) {
                              "percent_median" = NA,
                              "percentile_today" = NA,
                              "percent_normal" = NA, "days_till_peak" = days_till_peak, "day_peak" = day_peak[1])
-      empty_df$id <- id
+      empty_df$id <- stn_id
       empty_df$station_name <- ifelse(length(station_name) > 0, station_name, NA)
       empty_df$el_site <- el_site
       empty_df$owned_by <- owned_by
@@ -797,14 +797,13 @@ plot_data <- function(data_plot_1, stn_id, save, path) {
       if (length(percent_median) == 0){percent_median = NA}
       if (length(percentile_today) == 0){percentile_today = NA}
 
-      stats_out_i <- c(id, station_name, el_site, owned_by, year_est, basin, SWE_today, percent_median,
-                       percentile_today, percent_normal_mean, days_till_peak) %>%
-        tidyr::replace_na("no data")
-
-      stats_out_2 <- data.frame(t(data.frame(stats_out_i)), day_peak[1])
-      colnames(stats_out_2) <- c("id", "station_name", "el_site", "owned_by", "year_est", "basin", "SWE_today", "percent_median",
-                                 "percentile_today", "percent_normal_mean", "days_till_peak", "day_peak")
-      row.names(stats_out_2) <- c()
+      stats_out_i <- data.frame("id" = stn_id, "station_name" = station_name,
+                                "el_site" = el_site, "owned_by" = owned_by, "year_est" = year_est, "basin" = basin,
+                                "SWE_today" = SWE_today, "percent_median" = percent_median,
+                                "percentile_today" = percentile_today, "percent_normal_mean" = percent_normal_mean,
+                                "days_till_peak" = as.numeric(days_till_peak), "day_peak" = day_peak[1])
+        #tidyr::replace_na("no data")
+      row.names(stats_out_i) <- c()
 
       # Add in the density for today
       snow_depth <- bcsnowdata::get_aswe_databc(station_id = stn_id,
@@ -817,7 +816,7 @@ plot_data <- function(data_plot_1, stn_id, save, path) {
         dplyr::distinct(SnowDepth_cm, .keep_all = TRUE)
 
       # Calculate density
-      stats_out <- dplyr::full_join(stats_out_2, snow_depth, by = "id") %>%
+      stats_out <- dplyr::full_join(stats_out_i, snow_depth) %>%
         dplyr::mutate(swe_mm = as.numeric(as.character(SWE_today))) %>%
         dplyr::mutate(SWE_cm = swe_mm / 10) %>%
         dplyr::mutate(density_cmcm = round(SWE_cm / SnowDepth_cm, digits = 2)) %>%
@@ -859,8 +858,7 @@ plot_interactive_aswe <- function (path, id, save = "No") {
 
 
   # Run function over all sites that you have
-  plots <- lapply(id[2],
-                  plot_data,
+  plots <- lapply(id, plot_function,
                   data_plot_1,
                   save,
                   path)
