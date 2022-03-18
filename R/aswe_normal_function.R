@@ -56,7 +56,7 @@ aswe_normal <- function(data, normal_max, normal_min, data_id, ask = FALSE, forc
       dplyr::filter(id %in% unique(data$id))
 
     # If the archive doesn't have the normal range you want, get the data for your normal range and save it
-    if (dim(check)[1] < 1 | !(all(unique(check$id) == unique(data$id)))) {
+    if (dim(check)[1] < 1 | !(all(unique(check$id) %in% unique(data$id)))) {
 
       # get normals for the year range you want
       df_normals_out  <- int_aswenorm(data, normal_max, normal_min, data_id)
