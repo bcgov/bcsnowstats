@@ -47,8 +47,7 @@ snow_datafill <- function(data_soi, data_id, normal_max, normal_min, ...) {
    location_station <- sf::st_as_sf(location_station)
 
    # All other sites within the vicinity
-   location_all <- bcsnowdata::snow_auto_location()
-   location_all <- sf::st_as_sf(location_all) %>%
+   location_all <- sf::st_as_sf(bcsnowdata::snow_auto_location()) %>%
      dplyr::filter(!(LOCATION_ID %in% unique(data_soi$id)))
 
    # 100 km buffer around the site
