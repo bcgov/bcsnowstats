@@ -45,15 +45,14 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
   }
 
   id <- unique(data_norm$id)
+  aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
 
   if (dim(data_norm)[1] == 0) {
       df_normals_out <- data.frame(station_id = character())
 
-  } else if (any(id %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) { # Check to see whether the station is a manual or automated station
+  } else if (any(id %in% aswe)) { # Check to see whether the station is a manual or automated station
 
       data_id <- "value"
-
-      aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
 
       # filter data for ASWE sites
       data_swe <- data_norm %>%
