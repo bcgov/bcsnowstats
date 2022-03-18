@@ -41,7 +41,7 @@ ad_data <- function(station, normal_max, normal_min, data_id) {
     ad_data <- data_massage(data = ad_st) %>% # add columns and water year
       dplyr::filter(wr <= normal_max, wr >= normal_min) %>% # Filter by the normal dates that you specify
       dplyr::group_by(id) %>%
-      dplyr::rename(values_stats_ad = all_of(data_id)) %>%
+      dplyr::rename(values_stats_ad = value) %>%
       dplyr::filter(!is.na(values_stats_ad)) %>% # filter out missing data
       dplyr::ungroup() %>%
       dplyr::group_by(m_d)
