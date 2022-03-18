@@ -27,21 +27,23 @@
 
 get_snow_stats <- function(station_id = c("all", "aswe", "manual"), survey_period, get_year, normal_min, normal_max, force = TRUE) {
 
+  aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
+  man <- bcsnowdata::snow_manual_location()$LOCATION_ID
+
   if (any(station_id %in% c("aswe", "ASWE", "Aswe"))) {
-    id_aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
+    id_aswe <- aswe
   } else if (any(station_id %in% c("manual", "MANUAL", "Manual", "man"))) {
-    id_manual <- bcsnowdata::snow_manual_location()$LOCATION_ID
+    id_manual <- man
   } else if (any(station_id %in% c("ALL", "all", "All"))) {
-    id_aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
-    id_manual <- bcsnowdata::snow_manual_location()$LOCATION_ID
+    id_aswe <- aswe
+    id_manual <- man
   } else {
 
     # Check to see whether the station is a manual or automated station
-    id_aswe <- station_id[station_id %in% bcsnowdata::snow_auto_location()$LOCATION_ID]
+    id_aswe <- station_id[station_id %in% aswe]
 
-    id_manual <- station_id[station_id %in% bcsnowdata::snow_manual_location()$LOCATION_ID]
+    id_manual <- station_id[station_id %in% man]
   }
-
 
   if (length(id_aswe) > 0) {
   #if (any(station_id %in% c("aswe", "ASWE", "Aswe")) || any(station_id %in% c("ALL", "all", "All")) || any(station_id %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) {
@@ -53,7 +55,8 @@ get_snow_stats <- function(station_id = c("all", "aswe", "manual"), survey_perio
                force = force)
   }
   # Manual data
-  if (station_id %in% c("manual", "MANUAL", "Manual", "man") || station_id %in% c("ALL", "all", "All") || station_id %in%  bcsnowdata::snow_manual_location()$LOCATION_ID) {
+  if (length(id_manual) > 0) {
+  #if (station_id %in% c("manual", "MANUAL", "Manual", "man") || station_id %in% c("ALL", "all", "All") || station_id %in%  bcsnowdata::snow_manual_location()$LOCATION_ID) {
     df_manual <- stats_MSWE(station_id = id_manual,
                survey_period = survey_period,
                get_year = get_year,
