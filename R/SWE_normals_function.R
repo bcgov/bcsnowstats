@@ -27,15 +27,18 @@
 
 SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
 
+  aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
+  manual <- bcsnowdata::snow_manual_location()$LOCATION_ID
+
   # if the user input data as a station name (i.e., the function is being used as a stand alone function), get the data for the station
-  if (all(data %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) {
+  if (all(data %in% aswe)) {
     data_norm <- bcsnowdata::get_aswe_databc(
         station_id = data,
         get_year = "All",
         parameter = "swe",
         timestep = "daily") %>%
       dplyr::rename("values_stats" = value)
-  } else if (all(data %in% bcsnowdata::snow_manual_location()$LOCATION_ID)) {
+  } else if (all(data %in% manual)) {
     data_norm <- bcsnowdata::get_manual_swe(
         station_id = data,
         get_year = "All",
@@ -45,7 +48,6 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
   }
 
   id <- unique(data_norm$id)
-  aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
 
   if (dim(data_norm)[1] == 0) {
       df_normals_out <- data.frame(station_id = character())
@@ -62,13 +64,13 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
       df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id = "values_stats", force = force)
 
   # If the site is manual site
-  } else if (any(id %in% bcsnowdata::snow_manual_location()$LOCATION_ID)) {
+  } else if (any(id %in% manual)) {
 
       data_id <- "swe_mm"
 
       # filter data for ASWE sites
       data_man <- data_norm %>%
-        dplyr::filter(id %in% bcsnowdata::snow_manual_location()$LOCATION_ID)
+        dplyr::filter(id %in% manual)
 
       df_normals_man <- manual_normal_prep(data = data_man, normal_max = normal_max, normal_min = normal_min, data_id = data_id)
   } else if (id %in% snow_basins()) {
