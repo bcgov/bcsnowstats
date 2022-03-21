@@ -162,8 +162,10 @@ getSWE_current <- function(data){
 #' @examples \dontrun{}
 plot_function <- function(stn_id, data_plot_1, save, path) {
 
+  aswe <- bcsnowdata::snow_auto_location()
+
   # Get station name(s)
-  station_name <- bcsnowdata::snow_auto_location()$LOCATION_NAME[snow_auto_location()$LOCATION_ID %in% as.character(stn_id)]
+  station_name <- aswe$LOCATION_NAME[aswe$LOCATION_ID %in% as.character(stn_id)]
 
   df <- data_plot_1 %>%
     dplyr::filter(id == as.character(stn_id)) %>%
@@ -802,25 +804,36 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                                 "SWE_today" = SWE_today, "percent_median" = percent_median,
                                 "percentile_today" = percentile_today, "percent_normal_mean" = percent_normal_mean,
                                 "days_till_peak" = as.numeric(days_till_peak), "day_peak" = day_peak[1])
-        #tidyr::replace_na("no data")
+
       row.names(stats_out_i) <- c()
 
       # Add in the density for today
       snow_depth <- bcsnowdata::get_aswe_databc(station_id = stn_id,
                                                 get_year = bcsnowdata::wtr_yr(Sys.Date()),
                                                 parameter = "snow_depth",
-                                                timestep = "daily") %>%
-        dplyr::rename(SnowDepth_cm = value) %>%
-        dplyr::select(date_utc, SnowDepth_cm, id) %>%
-        dplyr::filter(date_utc == Sys.Date()) %>%# choose today's data
-        dplyr::distinct(SnowDepth_cm, .keep_all = TRUE)
+                                                timestep = "daily")
+      if ("value" %in% colnames(snow_depth))  {
+        snow_depth_cm <- snow_depth %>%
+          dplyr::rename(SnowDepth_cm = value) %>%
+          dplyr::select(date_utc, SnowDepth_cm, id) %>%
+          dplyr::filter(date_utc == Sys.Date()) %>%# choose today's data
+          dplyr::distinct(SnowDepth_cm, .keep_all = TRUE)
 
-      # Calculate density
-      stats_out <- dplyr::full_join(stats_out_i, snow_depth) %>%
-        dplyr::mutate(swe_mm = as.numeric(as.character(SWE_today))) %>%
-        dplyr::mutate(SWE_cm = swe_mm / 10) %>%
-        dplyr::mutate(density_cmcm = round(SWE_cm / SnowDepth_cm, digits = 2)) %>%
-        dplyr::mutate(density_cmcm = replace(density_cmcm, density_cmcm >1.0, ">1.0")) %>%
+        # Calculate density
+        snow_density <- dplyr::full_join(stats_out_i, snow_depth_cm) %>%
+          dplyr::mutate(swe_mm = as.numeric(as.character(SWE_today))) %>%
+          dplyr::mutate(SWE_cm = swe_mm / 10) %>%
+          dplyr::mutate(density_cmcm = round(SWE_cm / SnowDepth_cm, digits = 2)) %>%
+          dplyr::mutate(density_cmcm = replace(density_cmcm, density_cmcm >1.0, ">1.0"))
+      } else {
+        snow_density <- stats_out_i %>%
+          dplyr::mutate(SnowDepth_cm = NA) %>%
+          dplyr::mutate(swe_mm = as.numeric(as.character(SWE_today))) %>%
+          dplyr::mutate(SWE_cm = swe_mm / 10) %>%
+          dplyr::mutate(density_cmcm = NA)
+      }
+
+      stats_out <- snow_density %>%
         # Add in the post-peak SWE statistics
         dplyr::mutate(percentSWE_remaining = percent_SWE_remaining) %>%
         dplyr::mutate(percentpeak_vsnorm = percentpeak_vs_norm) %>%
@@ -858,7 +871,8 @@ plot_interactive_aswe <- function (path, id, save = "No") {
 
 
   # Run function over all sites that you have
-  plots <- lapply(id, plot_function,
+  plots <- lapply(unique(id),
+                  plot_function,
                   data_plot_1,
                   save,
                   path)
