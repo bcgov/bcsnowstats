@@ -34,7 +34,7 @@ aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_m
 
     # Get data for the station in order to calculate statistics
     df_tmp_raw <- data_all %>%
-      dplyr::filter(id %in% id)
+      dplyr::filter(id %in% stations)
 
     # ===========
     # Preprocessing
@@ -78,7 +78,7 @@ aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_m
     # ===========
     if (dim(df_stat)[1] > 1) {
 
-     df_tmp_2 <- dplyr::full_join(df_stat_fill, df_stat, by = c("id", "m_d"))
+      df_tmp_2 <- dplyr::full_join(df_stat_fill, df_stat, by = c("id", "m_d"))
 
       #Select the user defined time interval
       if (survey_period == "latest") {
