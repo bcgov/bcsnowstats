@@ -128,26 +128,27 @@ snow_stats <- function(data, normal_min, normal_max, data_id, force = FALSE, ...
 
   # append the normal to the stats
   df_stats_final <- dplyr::full_join(df_stats_all, df_hist_SWE, by = c("id", "m_d")) %>%
-    dplyr::rename(historic_swe = data)
+    dplyr::rename(historic_swe = data) %>%
+    dplyr::group_by(id)
     #dplyr::mutate(`Number of years within norm range with >= 80% data` = numberofyears_80)
 
   # Calculate the date of peak median and date of peak mean
-  dm_peak_median_date <- df_stats_final$m_d[df_stats_final$Q50 == max(df_stats_final$Q50)][1]
-  dm_peak_mean_date <- df_stats_final$m_d[df_stats_final$swe_mean == max(df_stats_final$swe_mean)][1]
+  dm_peak_median_date <- data.table::as.data.table(df_stats_final)[, .SD[which.max(Q50)], by = "id"] %>%
+    dplyr::select(id, m_d, Q50) %>%
+    dplyr::rename(date_peak_median = m_d, peak_median_swe = Q50)
 
-  # Get the max themselves
-  peak_median <- max(df_stats_final$Q50)
-  peak_mean <- max(df_stats_final$swe_mean)
+  dm_peak_mean_date <- data.table::as.data.table(df_stats_final)[, .SD[which.max(swe_mean)], by = "id"] %>%
+    dplyr::select(id, m_d, swe_mean) %>%
+    dplyr::rename(date_peak_mean = m_d, peak_mean_swe = swe_mean)
 
-  peak <- data.frame("date_peak_median" = dm_peak_median_date, "peak_median_swe" = peak_median,
-                     "date_peak_mean" = dm_peak_mean_date, "peak_mean_swe" = peak_mean)
+  peak <- dplyr::full_join(dm_peak_median_date, dm_peak_mean_date)
 
   #Remove -inf values and replace with NA
   peak_cleaned <- do.call(data.frame, lapply(peak, function(x) replace(x, is.infinite(x), NA)))
 
   # Bind to statistics
   if (dim(df_stats_final)[1] > 0) {
-    df_stats_final_peak <- cbind(df_stats_final, peak_cleaned)
+    df_stats_final_peak <- dplyr::full_join(df_stats_final, peak_cleaned)
   } else if (dim(df_stats_final)[1] == 0) {
     df_stats_final[1, ] <- NA
     df_stats_final_peak <- cbind(df_stats_final, peak_cleaned)
