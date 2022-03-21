@@ -33,8 +33,8 @@ aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_m
   if ("id" %in% colnames(data_all)) {
 
     # Get data for the station in order to calculate statistics
-    df_tmp_raw <- data_all %>%
-      dplyr::filter(id %in% stations)
+    df_tmp_raw <- data_all #%>%
+      #dplyr::filter(id %in% stations)
 
     # ===========
     # Preprocessing
@@ -102,19 +102,26 @@ aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_m
       }
 
       # Calculate statistics for the day you want
+      data_range <- latest_stats_1 %>%
+        dplyr::group_by(id) %>%
+        dplyr::summarize(data_range = paste0(as.Date(min(date_utc)), " to ", as.Date(max(date_utc))),
+                         data_range = paste0(as.Date(min(date_utc)), " to ", as.Date(max(date_utc)))
+        )
+
       latest_stats_day <- latest_stats_1 %>%
-        dplyr::mutate(data_range = paste0(as.Date(min(date_utc)), " to ", as.Date(max(date_utc)))) %>%
+        dplyr::mutate(percent_Q50 = round((mean_day / Q50 * 100), digits = 2)) %>%
         dplyr::mutate(percent_Q50 = round((mean_day / Q50 * 100), digits = 2)) %>%
         dplyr::mutate(percent_mean = round((mean_day / swe_mean * 100), digits = 2)) %>%
         dplyr::mutate(percent_normal_mean = ifelse(!is.na(normal_swe_mean), round((mean_day / normal_swe_mean * 100), digits = 2),
-                                                 NA)) %>%
-        dplyr::mutate(percent_normal_median = ifelse(!is.na(normal_Q50), round((mean_day / normal_Q50 * 100), digits = 2),
                                                    NA)) %>%
-        dplyr::group_by(m_d) %>%
+        dplyr::mutate(percent_normal_median = ifelse(!is.na(normal_Q50), round((mean_day / normal_Q50 * 100), digits = 2),
+                                                     NA)) %>%
+        dplyr::full_join(data_range) %>%
         dplyr::filter(!is.na(mean_day)) %>%
         #dplyr::mutate(prctile = round(ecdf(mean_day)(mean_day)*100, digits = 2)) %>%
         #dplyr::mutate(prctile = round(percent_rank(mean_day)*100, digits = 2)) %>% # try calculating the percentile for a month-day across all years by percent_rank
         dplyr::arrange(id, date_utc)
+
 
       # Calculate the percentile by day - historic SWE in the dataframe
       if (dim(latest_stats_day)[1] >= 1) { # make sure there is data within the data frame
@@ -128,12 +135,7 @@ aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_m
           dplyr::arrange(id, date_utc)
 
         # Return rank of current value
-        #latest_stats_2$current_rank_min <- lapply(rank(as.numeric(c(paste0(unlist(latest_stats_day$historic_SWE)), latest_stats_day$value)))[length(c(paste0(unlist(latest_stats_day$historic_SWE)), latest_stats_day$value))]
-
         latest_stats_2$current_rank_min <- mapply(rank_min_function, latest_stats_day$historic_swe, latest_stats_day$value)
-
-        # Return rank of current value
-        #latest_stats_2$current_rank_max <- rank(-(as.numeric(c(paste0(unlist(latest_stats_day$historic_SWE)), latest_stats_day$value))))[length(c(paste0(unlist(latest_stats_day$historic_SWE)), latest_stats_day$value))]
 
         latest_stats_2$current_rank_max <- mapply(rank_max_function, latest_stats_day$historic_swe, latest_stats_day$value)
 
