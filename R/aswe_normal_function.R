@@ -111,23 +111,50 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
   df_normal_80 <- df_normal_time %>%
     dplyr::filter(!is.na(values_stats)) %>% # # filter out missing data
     dplyr::ungroup() %>%
-    dplyr::group_by(wr) %>%
+    dplyr::group_by(id, wr) %>%
     dplyr::filter(lubridate::month(as.Date(m_d, format = "%m-%d")) <= 6 || lubridate::month(as.Date(m_d, format = "%m-%d")) >= 10) %>% # get only the snow accumulation and melt season
     dplyr::mutate(percent_available = length(values_stats) / length(seq(as.Date("2020-10-01"), as.Date("2021-06-30"), by = "day")) * 100) %>%
-    dplyr::select(wr, percent_available) %>%
+    dplyr::select(id, wr, percent_available) %>%
     unique() %>%
     dplyr::filter(percent_available >= 80) # filter by the 80% WMO threshold
 
   # Get the number of years within the normal range with >= 80% data coverage within a specific year
-  numberofyears_80 <- dim(df_normal_80)[1]
+  #numberofyears_80 <- dim(df_normal_80)[1]
+  ny_80 <- df_normal_80 %>%
+    dplyr::group_by(id) %>%
+    dplyr::summarize(numberofyears_80_raw = n())
 
   # Add the number of years with 80% of data to the dataframe
-  df_normal_time$numberofyears_80_raw <- dim(df_normal_80)[1]
+  df_nt <- df_normal_time %>%
+    dplyr::full_join(numberofyears_80)
+
+  normals <- lapply(unique(df_nt$id),
+    calc_norm,
+    ny_80,
+    df_nt,
+    df_normal_80)
+
+  df_normals_out <- do.call(rbind, normals)
+
+  return(df_normals_out)
+}
+
+
+calc_norm <- function(station, ny_80, df_nt, df_normal_80) {
+
+  numberofyears_80 <- ny_80 %>%
+    dplyr::filter(id %in% station)
+
+  df_normal_time <- df_nt %>%
+    dplyr::filter(id %in% station)
+
+  dfn_80 <- df_normal_80 %>%
+    dplyr::filter(id %in% station)
 
   # =============================
   # Fill in data depending on how many years of data there are available
   # Is there less than 10 years of data?
-  if (numberofyears_80 < 10) {
+  if (numberofyears_80$numberofyears_80_raw < 10) {
 
     data_0t10 <- df_normal_time # Make a new variable to preserve the initial data - years with at least 80% of the data in the snow accumulation period.
 
@@ -137,13 +164,13 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
 
     # Filter out the years that have less that 80% of the data within the snow accumulation season; Add in correct columms
     all_swe <- data_0t10 %>%
-      dplyr::filter(wr %in% df_normal_80$wr) %>%
+      dplyr::filter(wr %in% dfn_80$wr) %>%
       dplyr::mutate(numberofyears_estimated_80 = numberofyears_80_raw) %>%
       dplyr::mutate(swe_fornormal = values_stats)
   }
 
   # Does the station have between 10-20 years of data? If so, extend the dataset using 1) manual dataset (if converted), and 2) adjacent stations
-  if (numberofyears_80 >= 10 && numberofyears_80 < 20) {
+  if (numberofyears_80$numberofyears_80_raw >= 10 && numberofyears_80$numberofyears_80_raw < 20) {
 
     data_20t10 <- df_normal_time # Make a new variable to preserve the initial data - years with at least 80% of the data in the snow accumulation period.
 
@@ -152,12 +179,12 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
   }
 
   # Does the site have between 20-30 years of data? Don't add in any additional data and jsut calculcate normals from
-  if (numberofyears_80 >= 20 && numberofyears_80 <= 30) {
+  if (numberofyears_80$numberofyears_80_raw >= 20 && numberofyears_80$numberofyears_80_raw <= 30) {
 
     # DON'T Filter out the years that have less that 80% of the data within the snow accumulation season; Add in correct columns
     all_swe <- df_normal_time %>%
-      #dplyr::filter(wr %in% df_normal_80$wr) %>%
-      dplyr::mutate(numberofyears_estimated_80 = numberofyears_80_raw) %>%
+     #dplyr::filter(wr %in% df_normal_80$wr) %>%
+      dplyr::mutate(numberofyears_estimated_80 = numberofyears_80$numberofyears_80_raw) %>%
       dplyr::mutate(swe_fornormal = values_stats)
   }
   # End of data filling according to thresholds
@@ -172,15 +199,15 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
 
     # Calculate the normal statistics for each day of the year
     df_normals <- do.call(data.frame,
-                          list(dplyr::summarise(all_swe_1, normal_minimum = min(swe_fornormal, na.rm = TRUE), .groups = "keep"),
-                               dplyr::summarise(all_swe_1, normal_swe_mean = mean(swe_fornormal, na.rm = TRUE), .groups = "keep"),
-                               dplyr::summarise(all_swe_1, normal_Q5 = quantile(swe_fornormal, 0.05, na.rm = TRUE), .groups = "keep"),
-                               dplyr::summarise(all_swe_1, normal_Q10 = quantile(swe_fornormal, 0.1, na.rm = TRUE), .groups = "keep"),
-                               dplyr::summarise(all_swe_1, normal_Q25 = quantile(swe_fornormal, 0.25, na.rm = TRUE), .groups = "keep"),
-                               dplyr::summarise(all_swe_1, normal_Q50 = quantile(swe_fornormal, 0.5, na.rm = TRUE), .groups = "keep"),
-                               dplyr::summarise(all_swe_1, normal_Q75 = quantile(swe_fornormal, 0.75, na.rm = TRUE), .groups = "keep"),
-                               dplyr::summarise(all_swe_1, normal_Q90 = quantile(swe_fornormal, 0.90, na.rm = TRUE), .groups = "keep"),
-                               dplyr::summarise(all_swe_1, normal_maximum = max(swe_fornormal, na.rm = TRUE), .groups = "keep"))) %>%
+                        list(dplyr::summarise(all_swe_1, normal_minimum = min(swe_fornormal, na.rm = TRUE), .groups = "keep"),
+                             dplyr::summarise(all_swe_1, normal_swe_mean = mean(swe_fornormal, na.rm = TRUE), .groups = "keep"),
+                             dplyr::summarise(all_swe_1, normal_Q5 = quantile(swe_fornormal, 0.05, na.rm = TRUE), .groups = "keep"),
+                             dplyr::summarise(all_swe_1, normal_Q10 = quantile(swe_fornormal, 0.1, na.rm = TRUE), .groups = "keep"),
+                             dplyr::summarise(all_swe_1, normal_Q25 = quantile(swe_fornormal, 0.25, na.rm = TRUE), .groups = "keep"),
+                             dplyr::summarise(all_swe_1, normal_Q50 = quantile(swe_fornormal, 0.5, na.rm = TRUE), .groups = "keep"),
+                             dplyr::summarise(all_swe_1, normal_Q75 = quantile(swe_fornormal, 0.75, na.rm = TRUE), .groups = "keep"),
+                             dplyr::summarise(all_swe_1, normal_Q90 = quantile(swe_fornormal, 0.90, na.rm = TRUE), .groups = "keep"),
+                             dplyr::summarise(all_swe_1, normal_maximum = max(swe_fornormal, na.rm = TRUE), .groups = "keep"))) %>%
       dplyr::select(-m_d.1, -m_d.2, -m_d.3, -m_d.4, -m_d.5, -m_d.6, -m_d.7, -m_d.8) %>%
       dplyr::select(-id.1, -id.2, -id.3, -id.4, -id.5, -id.6, -id.7, -id.8) %>%
       #dplyr::mutate(Data_Range_normal = (paste0(round(normal_minimum, digits = 0), ' to ', round(normal_maximum, digits = 0)))) %>%
@@ -189,13 +216,13 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
       dplyr::mutate(normal_datarange_raw = unique(all_swe$numberofyears_80_raw, na.rm = TRUE)[!is.na(unique(all_swe$numberofyears_80_raw, na.rm = TRUE))])
 
     # get the day of the max and min!! Use only 'real', non estimated data
-    min_date <- all_swe %>%
+   min_date <- all_swe %>%
       dplyr::group_by(id, m_d) %>%
       dplyr::slice(which.min(values_stats)) %>%
       dplyr::select(date_utc, id, m_d) %>%
       dplyr::rename(date_min_normal_utc = date_utc)
 
-    max_date <- all_swe %>%
+   max_date <- all_swe %>%
       dplyr::group_by(id, m_d) %>%
       dplyr::slice(which.max(values_stats)) %>%
       dplyr::select(date_utc, id, m_d) %>%
@@ -211,24 +238,23 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
     # If there is less than 10 years of data available even after trying adjacent sites, return
   } else {
     df_normals_out <- data.frame("id"  = unique(data$id),
-                                 "m_d" = NA,
-                                 "normal_minimum" = NA,
-                                 "normal_swe_mean" = NA,
-                                 "normal_Q5" = NA,
-                                 "normal_Q10" = NA,
-                                 "normal_Q25"  = NA,
-                                 "normal_Q50" = NA,
-                                 "normal_Q75" = NA,
-                                 "normal_Q90" = NA,
-                                 "normal_maximum" = NA,
-                                 "data_range_normal" = NA,
-                                 "initial_normal_range" = paste0(normal_min, " to ", normal_max),
-                                 "normal_datarange_estimated" = NA,
-                                 "normal_datarange_raw" = NA,
-                                 "date_min_normal_utc" = NA,
-                                 "date_max_normal_utc"  = NA)
+                               "m_d" = NA,
+                               "normal_minimum" = NA,
+                               "normal_swe_mean" = NA,
+                               "normal_Q5" = NA,
+                               "normal_Q10" = NA,
+                               "normal_Q25"  = NA,
+                               "normal_Q50" = NA,
+                               "normal_Q75" = NA,
+                               "normal_Q90" = NA,
+                               "normal_maximum" = NA,
+                               "data_range_normal" = NA,
+                               "initial_normal_range" = paste0(normal_min, " to ", normal_max),
+                               "normal_datarange_estimated" = NA,
+                               "normal_datarange_raw" = NA,
+                               "date_min_normal_utc" = NA,
+                               "date_max_normal_utc"  = NA)
 
   }
-
-  return(df_normals_out)
+  df_normals_out
 }
