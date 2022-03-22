@@ -126,11 +126,10 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
 
   # Add the number of years with 80% of data to the dataframe
   df_nt <- df_normal_time %>%
-    dplyr::full_join(numberofyears_80)
+    dplyr::full_join(ny_80)
 
   normals <- lapply(unique(df_nt$id),
     calc_norm,
-    ny_80,
     df_nt,
     df_normal_80)
 
@@ -139,11 +138,14 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
   return(df_normals_out)
 }
 
+# Function for defining whether to fill in data and calculate normals. To be run station by station
+calc_norm <- function(station, df_nt, df_normal_80) {
 
-calc_norm <- function(station, ny_80, df_nt, df_normal_80) {
-
-  numberofyears_80 <- ny_80 %>%
-    dplyr::filter(id %in% station)
+  numberofyears_80 <- df_nt %>%
+    ungroup() %>%
+    dplyr::filter(id %in% station) %>%
+    dplyr::select(numberofyears_80_raw) %>%
+    unique()
 
   df_normal_time <- df_nt %>%
     dplyr::filter(id %in% station)
@@ -216,13 +218,13 @@ calc_norm <- function(station, ny_80, df_nt, df_normal_80) {
       dplyr::mutate(normal_datarange_raw = unique(all_swe$numberofyears_80_raw, na.rm = TRUE)[!is.na(unique(all_swe$numberofyears_80_raw, na.rm = TRUE))])
 
     # get the day of the max and min!! Use only 'real', non estimated data
-   min_date <- all_swe %>%
+    min_date <- all_swe %>%
       dplyr::group_by(id, m_d) %>%
       dplyr::slice(which.min(values_stats)) %>%
       dplyr::select(date_utc, id, m_d) %>%
       dplyr::rename(date_min_normal_utc = date_utc)
 
-   max_date <- all_swe %>%
+    max_date <- all_swe %>%
       dplyr::group_by(id, m_d) %>%
       dplyr::slice(which.max(values_stats)) %>%
       dplyr::select(date_utc, id, m_d) %>%
