@@ -61,7 +61,7 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
         dplyr::filter(id %in% aswe)
 
       # Use the aswe_normal() function to fill in data (if appropriate) and calculate normals (if there is sufficient data)
-      df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id = "values_stats", force = force)
+      df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id = "value", force = force)
 
   # If the site is manual site
   } else if (any(id %in% manual)) {
