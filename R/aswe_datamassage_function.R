@@ -22,7 +22,8 @@
 
 data_massage <- function(data) {
 
-  data_original_function <- data # save original data in case!
+  data_original_function <- data %>% # save original data in case!
+    dplyr::group_by(id)
 
   # Check to make sure that data has a wr column
   if ("wr" %in% colnames(data)) {
