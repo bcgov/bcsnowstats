@@ -282,7 +282,7 @@ getmonthly_deltaSWE <- function(id) {
 getmonthly_deltaSWE_YTD <- function(id) {
 
    test_1 <- bcsnowdata::get_aswe_databc(station_id = id,
-                             get_year = "All",
+                             get_year = bcsnowdata::wtr_yr(Sys.Date()),
                              parameter = "swe",
                              timestep = "daily") # one site, all years
 
