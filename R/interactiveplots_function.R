@@ -892,10 +892,10 @@ plot_interactive_aswe <- function (path, id, save = "No") {
 #' @examples \dontrun{}
 plot_climate_aswe <- function(path, id, save = "No") {
 
-  station_name <- bcsnowdata::snow_auto_location()$LOCATION_NAME[snow_auto_location()$LOCATION_ID %in% as.character(id)]
   # -------------------------
-  ## Plot the temp
+  # Get data for all stations
   # -------------------------
+
   # get the temp for the station
   temp_raw <- bcsnowdata::get_aswe_databc(station_id = id,
                          get_year = bcsnowdata::wtr_yr(Sys.Date()),
@@ -904,7 +904,7 @@ plot_climate_aswe <- function(path, id, save = "No") {
 
   temp <- temp_raw %>%
    dplyr::mutate(Date = as.Date(date_utc)) %>%
-   dplyr::group_by(Date) %>%
+   dplyr::group_by(id, Date) %>%
    dplyr::mutate(Daily_max = max(value, na.rm = TRUE)) %>%
    dplyr::mutate(Daily_min = min(value, na.rm = TRUE)) %>%
    dplyr::select(Date, Daily_max, Daily_min) %>%
@@ -912,98 +912,129 @@ plot_climate_aswe <- function(path, id, save = "No") {
    dplyr::ungroup() %>%
    dplyr::mutate(Date = as.Date(Date)) # ensure the date is in the right format
 
-  temp_p <- temp %>%
-   plotly::plot_ly() %>%
-   plotly::add_trace(x = ~Date, y = ~Daily_max, name= "Daily Max Temp", type = 'scatter', mode = 'lines', connectgaps = FALSE) %>%
-   plotly::add_trace(x = ~Date, y = ~Daily_min, type = 'scatter', type = 'scatter', mode = 'lines',
-             line = list(color = "grey"), name= "Daily Min Temp", connectgaps = FALSE) %>%
-   plotly::layout(title = paste0('Daily Temp (degree C) for ', station_name, ", ", id),
-          xaxis = list(
-            title = 'Date',
-            type = 'date',
-            tickformat = "%d-%B"),
-          yaxis = list(title = 'Daily Temp (degree C)'))
-
   # -------------------------
-  ## Plot the precip for the site
+  # Get the precip data and calculate daily change
   # -------------------------
   precip <- bcsnowdata::get_aswe_databc(station_id = id,
-                           get_year = bcsnowdata::wtr_yr(Sys.Date()),
-                           parameter = "precipitation",
-                           timestep = "daily") %>%
-    dplyr::distinct(date_utc, .keep_all = TRUE)
-
-  # calculate the difference in precipitation between days
-  precip_diff <- diff(precip$value)
-  if (length(precip_diff) > 0) {
-    delta_precip <-  data.frame(R.utils::insert(precip_diff, 1, NA)) %>% # insert leading NA
-     dplyr::mutate(date_utc = precip$date_utc) %>%
-      dplyr::rename(deltaprecip_daily_mm = "R.utils..insert.precip_diff..1..NA.") %>%
-      dplyr::mutate(plus_neg = ifelse(deltaprecip_daily_mm >= 0, "green", "red"))
-  } else {
-     delta_precip <- data.frame(date_utc = NA, deltaprecip_daily_mm = NA, plus_neg = NA)
-  }
-
-  precip_p <- delta_precip %>%
-    plotly::plot_ly() %>%
-    # add_trace(x = ~date_utc, y = ~value, name= "Accumulated Precip", type = 'scatter', mode = 'markers') %>%
-    plotly::add_bars(data = subset(delta_precip, plus_neg == 'green'), x = ~date_utc, y = ~deltaprecip_daily_mm, type = 'bar', marker = list(color = "green"),
-            name = "Change in Daily Accumulated Precip") %>%
-    #add_bars(data = subset(delta_precip, plus_neg == 'red'), x = ~date_utc, y = ~deltaprecip_daily_mm, type = 'bar', marker = list(color = "red"),
-    #          name = 'Loss') %>%
-    plotly::layout(title = paste0('Increase in Daily Precipitation for ', station_name, ", ", id),
-          xaxis = list(
-            title = 'Date',
-            type = 'date',
-            tickformat = "%d-%B"),
-          yaxis = list(title = 'Increase in Daily Precipitation (mm) <br> <i>*Only increases in precip shown</i>'))
+                                        get_year = bcsnowdata::wtr_yr(Sys.Date()),
+                                        parameter = "precipitation",
+                                        timestep = "daily") %>%
+    dplyr::distinct(date_utc, .keep_all = TRUE) %>%
+    dplyr::group_by(id)
 
   # -------------------------
-  ## Plot the delta SWE
+  ## delta SWE
   # -------------------------
   # Get statistics data for the site you are plotting
-  data_plot_1 <- get_swe(id)
+  swe <- get_swe(id)
 
- # IF there is data, plot it. If not, assign the data as NA
- if (dim(data_plot_1)[1] > 1){
-  # isolate current year data with statistics
-  d_all_curr <- getSWE_current(data = data_plot_1)
-  # Calculate the delta SWE from the current year - d_all_curr
-  delta_SWE <-  diff(d_all_curr$value)
-  delta_SWE_full <-  data.frame(R.utils::insert(delta_SWE, 1, NA)) %>% # insert leading NA
-   dplyr::mutate(date_utc = d_all_curr$date_utc) %>%
-   dplyr::rename(deltaSWE_daily_mm = "R.utils..insert.delta_SWE..1..NA.") %>%
-   dplyr::mutate(plus_neg = ifelse(deltaSWE_daily_mm >= 0, "blue", "red"))
+  # Plot all three together
+  plot_climate <- function(station, temp, precip, swe, save) {
 
-  delta_all <- dplyr::full_join(d_all_curr, delta_SWE_full, by = "date_utc")
+      station_name <- bcsnowdata::snow_auto_location()$LOCATION_NAME[bcsnowdata::snow_auto_location()$LOCATION_ID %in% as.character(station)]
 
-  # Plot barchart of the delta SWE
-  delta_p <- plotly::plot_ly() %>%
-    plotly::add_bars(data = subset(delta_all, plus_neg == 'blue'), x = ~date_utc, y = ~deltaSWE_daily_mm, type = 'bar', marker = list(color = "blue"),
-            name = "Accumulation") %>%
-    plotly::add_bars(data = subset(delta_all, plus_neg == 'red'), x = ~date_utc, y = ~deltaSWE_daily_mm, type = 'bar', marker = list(color = "red"),
-            name = 'Loss') %>%
-    plotly::layout(title = paste0('Change in Daily SWE (mm) for ', station_name, ", ", id),
-          xaxis = list(
+      # temperature
+      temp_p <- temp %>%
+        dplyr::filter(id %in% station) %>%
+        plotly::plot_ly() %>%
+        plotly::add_trace(x = ~Date, y = ~Daily_max, name= "Daily Max Temp", type = 'scatter', mode = 'lines', connectgaps = FALSE) %>%
+        plotly::add_trace(x = ~Date, y = ~Daily_min, type = 'scatter', type = 'scatter', mode = 'lines',
+            line = list(color = "grey"), name= "Daily Min Temp", connectgaps = FALSE) %>%
+        plotly::layout(title = paste0('Daily Temp (degree C) for ', station_name, ", ", station),
+            xaxis = list(
             title = 'Date',
             type = 'date',
             tickformat = "%d-%B"),
-          yaxis = list(title = 'Change in Daily SWE (mm)'))
- } else {
-   delta_p <- plotly::plot_ly() # Assign an empty plot
- }
+            yaxis = list(title = 'Daily Temp (degree C)'))
 
- ## Save the precip, temp and delta SWE as one plot
- all_p <-  plotly::subplot(temp_p, precip_p, delta_p, nrows = 3, margin = 0.04, heights = c(0.3, 0.3, 0.4), shareX = TRUE, titleY = TRUE)
+      # Precipitation
+      precip_id <- precip %>%
+        dplyr::filter(id %in% station)
 
- if (save %in% c("True", "true", "T", "TRUE", TRUE)) {
-   htmlwidgets::saveWidget(plotly::as_widget(all_p),
-                           paste0(path, "delta_", id, ".html"),
+      # calculate the difference in precipitation between days
+      precip_diff <- diff(precip_id$value)
+      if (length(precip_diff) > 0) {
+        delta_precip <-  data.frame(R.utils::insert(precip_diff, 1, NA)) %>% # insert leading NA
+          dplyr::mutate(date_utc = precip_id$date_utc) %>%
+          dplyr::rename(deltaprecip_daily_mm = "R.utils..insert.precip_diff..1..NA.") %>%
+          dplyr::mutate(plus_neg = ifelse(deltaprecip_daily_mm >= 0, "green", "red"))
+      } else {
+        delta_precip <- data.frame(date_utc = NA, deltaprecip_daily_mm = NA, plus_neg = NA)
+      }
+
+      if (length(delta_precip) > 0) {
+        precip_p <- delta_precip %>%
+          plotly::plot_ly() %>%
+          # add_trace(x = ~date_utc, y = ~value, name= "Accumulated Precip", type = 'scatter', mode = 'markers') %>%
+          plotly::add_bars(data = subset(delta_precip, plus_neg == 'green'), x = ~date_utc, y = ~deltaprecip_daily_mm, type = 'bar', marker = list(color = "green"),
+            name = "Change in Daily Accumulated Precip") %>%
+          #add_bars(data = subset(delta_precip, plus_neg == 'red'), x = ~date_utc, y = ~deltaprecip_daily_mm, type = 'bar', marker = list(color = "red"),
+          #          name = 'Loss') %>%
+          plotly::layout(title = paste0('Increase in Daily Precipitation for ', station_name, ", ", station),
+            xaxis = list(
+              title = 'Date',
+              type = 'date',
+              tickformat = "%d-%B"),
+            yaxis = list(title = 'Increase in Daily Precipitation (mm) <br> <i>*Only increases in precip shown</i>'))
+        } else {
+          precip_p <- plotly::plot_ly() # Assign an empty plot
+        }
+
+      # ------------------------
+      # Plot barchart of the delta SWE
+      swe_id <- swe %>%
+        dplyr::filter(id %in% station)
+
+      # IF there is data, plot it. If not, assign the data as NA
+      if (dim(swe_id)[1] > 1) {
+
+        # isolate current year data with statistics
+        d_all_curr <- getSWE_current(data = swe_id)
+
+        # Calculate the delta SWE from the current year - d_all_curr
+        delta_SWE <-  diff(d_all_curr$value)
+        delta_SWE_full <-  data.frame(R.utils::insert(delta_SWE, 1, NA)) %>% # insert leading NA
+          dplyr::mutate(date_utc = d_all_curr$date_utc) %>%
+          dplyr::rename(deltaSWE_daily_mm = "R.utils..insert.delta_SWE..1..NA.") %>%
+          dplyr::mutate(plus_neg = ifelse(deltaSWE_daily_mm >= 0, "blue", "red"))
+
+        delta_all <- dplyr::full_join(d_all_curr, delta_SWE_full, by = "date_utc")
+      }
+
+      if (length(delta_all)[1] > 0) {
+        delta_p <- plotly::plot_ly() %>%
+          plotly::add_bars(data = subset(delta_all, plus_neg == 'blue'), x = ~date_utc, y = ~deltaSWE_daily_mm, type = 'bar', marker = list(color = "blue"),
+              name = "Accumulation") %>%
+          plotly::add_bars(data = subset(delta_all, plus_neg == 'red'), x = ~date_utc, y = ~deltaSWE_daily_mm, type = 'bar', marker = list(color = "red"),
+              name = 'Loss') %>%
+          plotly::layout(title = paste0('Change in Daily SWE (mm) for ', station_name, ", ", station),
+              xaxis = list(
+                title = 'Date',
+                type = 'date',
+                tickformat = "%d-%B"),
+            yaxis = list(title = 'Change in Daily SWE (mm)'))
+      } else {
+        delta_p <- plotly::plot_ly() # Assign an empty plot
+      }
+
+      ## Save the precip, temp and delta SWE as one plot
+      all_p <-  plotly::subplot(temp_p, precip_p, delta_p, nrows = 3, margin = 0.04, heights = c(0.3, 0.3, 0.4), shareX = TRUE, titleY = TRUE)
+
+      if (save %in% c("True", "true", "T", "TRUE", TRUE)) {
+        htmlwidgets::saveWidget(plotly::as_widget(all_p),
+                           paste0(path, "delta_", station, ".html"),
                            selfcontained = F,
                            libdir = NULL,
-                           title = paste0("SWE_Change ", id))
- }
- return(list("climate_plot" = all_p))
+                           title = paste0("SWE_Change ", station))
+      }
+
+      return(list("climate_plot" = all_p))
+    }
+
+    # Run function over all stations
+    plots <- lapply(id,
+                    plot_climate,
+                    temp, precip, swe, save)
 }
 
 # ================================================
