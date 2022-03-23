@@ -45,6 +45,11 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
         survey_period = "All")
   } else {
     data_norm <- data
+
+    if ("value" %in% colnames(data_norm)) {
+      data_norm <- data_norm %>%
+        dplyr::rename("values_stats" = value)
+    }
   }
 
   id <- unique(data_norm$id)
@@ -54,14 +59,14 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
 
   } else if (any(id %in% aswe)) { # Check to see whether the station is a manual or automated station
 
-      data_id <- "value"
+      #data_id <- "value"
 
       # filter data for ASWE sites
       data_swe <- data_norm %>%
         dplyr::filter(id %in% aswe)
 
       # Use the aswe_normal() function to fill in data (if appropriate) and calculate normals (if there is sufficient data)
-      df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id = "value", force = force)
+      df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id = "values_stats", force = force)
 
   # If the site is manual site
   } else if (any(id %in% manual)) {
@@ -77,7 +82,6 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
 
      # if you are trying to simply get the normal for the entire basin, take the average across the data
      df_normals_basin <- basin_normal(data = data_norm, normal_max = normal_max, normal_min = normal_min)
-
   }
 
   # If there is both aswe and manual, knit together. Otherwise, return the appropriate data
