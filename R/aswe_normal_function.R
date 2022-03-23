@@ -119,7 +119,6 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
     dplyr::filter(percent_available >= 80) # filter by the 80% WMO threshold
 
   # Get the number of years within the normal range with >= 80% data coverage within a specific year
-  #numberofyears_80 <- dim(df_normal_80)[1]
   ny_80 <- df_normal_80 %>%
     dplyr::group_by(id) %>%
     dplyr::summarize(numberofyears_80_raw = n())
@@ -131,7 +130,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
   normals <- lapply(unique(df_nt$id),
     calc_norm,
     df_nt,
-    df_normal_80)
+    df_normal_80, normal_max = normal_max, normal_min = normal_min)
 
   df_normals_out <- do.call(rbind, normals)
 
@@ -139,7 +138,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
 }
 
 # Function for defining whether to fill in data and calculate normals. To be run station by station
-calc_norm <- function(station, df_nt, df_normal_80) {
+calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
 
   numberofyears_80 <- df_nt %>%
     ungroup() %>%
