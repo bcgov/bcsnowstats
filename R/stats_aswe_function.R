@@ -72,7 +72,7 @@ stats_aswe <- function(station_id, parameter_id = "SWE", survey_period = "All", 
                                             parameter = "swe",
                                             timestep = "daily"
   )
-  #tims_start <- Sys.time()
+
   # Getting data at this point truncates data returned! Get data within lapply loop
   # use get_percentile function to calculate statistics for the dates and stations specified
   print("calculate stats")
@@ -81,10 +81,6 @@ stats_aswe <- function(station_id, parameter_id = "SWE", survey_period = "All", 
                        survey_period = survey_period,
                        get_year = get_year,
                        normal_min, normal_max, force)
-  #time_1 <- tims_start - Sys.time()
-
-  # unfold the list you created
-  #df_final_1 <- do.call(dplyr::bind_rows, list_stats)
 
   # create an empty row for stations that did not return any data for the period specified
   if (!isTRUE(all.equal(station_list, unique(df_final_1$id))) | !is.data.frame(df_final_1)) {
