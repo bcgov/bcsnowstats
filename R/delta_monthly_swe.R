@@ -119,7 +119,7 @@ SWE_diff_month_current <- function(month_select, data){
       dplyr::filter(day %in% c("1", "01", "28", "29", "30", "31")) %>%
       dplyr::arrange(Date)
 
-   if (dim(select_month)[1] > 0){
+   if (dim(select_month)[1] > 0) {
 
       # Figure out the difference in SWE between the first and last day of the month
       if (max(select_month$day, na.rm = TRUE) == "31") {
@@ -167,10 +167,11 @@ SWE_diff_month_current <- function(month_select, data){
             dplyr::arrange(Date)
       }
 
-      if (exists("data_diff")){
-         return(data_diff)
-      }
    } else {
+   }
+
+   if (exists("data_diff")){
+     return(data_diff)
    }
 }
 
@@ -209,7 +210,7 @@ getmonthly_deltaSWE <- function(id) {
    dplyr::mutate(year = format(Date, "%Y")) %>%
    dplyr::filter(!is.na(Mean_dailySWE))
 
-  if (dim(daily_swe)[1] > 0) {
+  if (dim(daily_swe)[1] > 1) {
 
    # Linear interpolation to fill in missing days of data.
    # Create a time series of the snow accomulation months: oct - july
@@ -300,58 +301,62 @@ getmonthly_deltaSWE_YTD <- function(id) {
       dplyr::group_by(Date)
 
     # Take daily mean SWE
-    daily_swe_current <- dplyr::summarise(current_year, Mean_dailySWE = mean(value, na.rm = TRUE)) %>%
-      dplyr::mutate(m_y = format(Date, "%m-%Y")) %>%
-      dplyr::mutate(day = format(Date, "%d")) %>%
-      dplyr::mutate(month = format(Date, "%m")) %>%
-      dplyr::mutate(year = format(Date, "%Y")) %>%
-      dplyr::filter(!is.na(Mean_dailySWE)) %>%
-      dplyr::group_by(month)
+    if ("value" %in% colnames(current_year)) {
+      daily_swe_current <- dplyr::summarise(current_year, Mean_dailySWE = mean(value, na.rm = TRUE)) %>%
+        dplyr::mutate(m_y = format(Date, "%m-%Y")) %>%
+        dplyr::mutate(day = format(Date, "%d")) %>%
+        dplyr::mutate(month = format(Date, "%m")) %>%
+        dplyr::mutate(year = format(Date, "%Y")) %>%
+        dplyr::filter(!is.na(Mean_dailySWE)) %>%
+        dplyr::group_by(month)
 
-    if (dim(daily_swe_current)[1] > 0){
-      # Linear interpolation to fill in missing days of data.
-      # Create a time series of the snow accomulation months: oct - july
-      #time_start <- min(daily_swe_current$Date, na.rm = TRUE)
-      time_start <- as.Date(paste0(as.character(bcsnowdata::wtr_yr(Sys.Date())-1),"-", "10", "-", "01"))
-      time_end <- max(daily_swe_current$Date, na.rm = TRUE)
+      if (dim(daily_swe_current)[1] > 0){
+        # Linear interpolation to fill in missing days of data.
+        # Create a time series of the snow accomulation months: oct - july
+        #time_start <- min(daily_swe_current$Date, na.rm = TRUE)
+        time_start <- as.Date(paste0(as.character(bcsnowdata::wtr_yr(Sys.Date())-1),"-", "10", "-", "01"))
+        time_end <- max(daily_swe_current$Date, na.rm = TRUE)
 
-      Date = as.data.frame(seq(as.Date(time_start), as.Date(time_end), by = "day"))
-      colnames(Date) <- c('Date')
+        Date = as.data.frame(seq(as.Date(time_start), as.Date(time_end), by = "day"))
+        colnames(Date) <- c('Date')
 
-      # Bind to the daily SWE and perform linear interpolation of missing data
-      daily_swe_NA <- dplyr::full_join(daily_swe_current, Date) %>%
-         dplyr::arrange(Date) %>%
-         dplyr::ungroup()
-      # if oct 1 is NA, fill with 0
-      daily_swe_NA$Mean_dailySWE[1] <- ifelse(is.na(daily_swe_NA$Mean_dailySWE["2019-10-01"]), 0, daily_swe_NA$Mean_dailySWE["2019-10-01"])
+        # Bind to the daily SWE and perform linear interpolation of missing data
+        daily_swe_NA <- dplyr::full_join(daily_swe_current, Date) %>%
+          dplyr::arrange(Date) %>%
+          dplyr::ungroup()
+        # if oct 1 is NA, fill with 0
+        daily_swe_NA$Mean_dailySWE[1] <- ifelse(is.na(daily_swe_NA$Mean_dailySWE["2019-10-01"]), 0, daily_swe_NA$Mean_dailySWE["2019-10-01"])
 
-      # Perform interpolation
-      daily_swe_NA <- daily_swe_NA %>%
-         dplyr::arrange(Date) %>%
-         dplyr::mutate(m_y = format(Date, "%m-%Y")) %>%
-         dplyr::mutate(day = format(Date, "%d")) %>%
-         dplyr::mutate(month = format(Date, "%m")) %>%
-         dplyr::mutate(year = format(Date, "%Y")) %>%
-         dplyr::mutate(dailySWE_interp = zoo::na.approx(Mean_dailySWE,
+        # Perform interpolation
+        daily_swe_NA <- daily_swe_NA %>%
+          dplyr::arrange(Date) %>%
+          dplyr::mutate(m_y = format(Date, "%m-%Y")) %>%
+          dplyr::mutate(day = format(Date, "%d")) %>%
+          dplyr::mutate(month = format(Date, "%m")) %>%
+          dplyr::mutate(year = format(Date, "%Y")) %>%
+          dplyr::mutate(dailySWE_interp = zoo::na.approx(Mean_dailySWE,
                                                    na.rm = T))
 
-      watermonths <- c(seq(10,12, by = 1), c("01", "02", "03", "04", "05", "06", "07", "08"))
+        watermonths <- c(seq(10,12, by = 1), c("01", "02", "03", "04", "05", "06", "07", "08"))
 
-      # Calculate the snow accumulation for each month
-      station_diff_current <- lapply(watermonths, SWE_diff_month_current, data = daily_swe_NA)
+        # Calculate the snow accumulation for each month
+        station_diff_current <- lapply(watermonths, SWE_diff_month_current, data = daily_swe_NA)
 
-      # Unlist statistics
-      station_diff_current_unlist <- do.call("rbind.data.frame", station_diff_current)
+        # Unlist statistics
+        station_diff_current_unlist <- do.call("rbind.data.frame", station_diff_current)
 
-      if (dim(station_diff_current_unlist)[1] > 0) {
-        station_diff_current_unlist <- do.call("rbind.data.frame", station_diff_current) %>%
-          dplyr::mutate(Month = lubridate::month(Date))
+        if (dim(station_diff_current_unlist)[1] > 0) {
+          station_diff_current_unlist <- do.call("rbind.data.frame", station_diff_current) %>%
+            dplyr::mutate(Month = lubridate::month(Date))
+        }
+      } else {
+        station_diff_current_unlist <- NA
       }
-   } else {
+    } else {
       station_diff_current_unlist <- NA
-   }
+    }
    } else {
-      station_diff_current_unlist <- NA
+     station_diff_current_unlist <- NA
    }
 
    # Write the year to date monthly accumulation data
