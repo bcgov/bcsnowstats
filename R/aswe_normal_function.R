@@ -61,12 +61,15 @@ aswe_normal <- function(data, normal_max, normal_min, data_id, ask = FALSE, forc
       # get normals for the year range you want
       df_normals_out  <- int_aswenorm(data, normal_max, normal_min, data_id)
 
-      # Append to the data for the other normal range calculated and save
-      df_normals_save <- dplyr::full_join(df_normals_out, df_normals_initial) %>%
-        unique() %>%
-        dplyr::arrange(m_d)
+      if (!is.null(df_normals_out)) {
+        # Append to the data for the other normal range calculated and save
+        df_normals_save <- dplyr::full_join(df_normals_out, df_normals_initial) %>%
+          unique() %>%
+          dplyr::arrange(m_d)
 
-      saveRDS(df_normals_save, fpath)
+        saveRDS(df_normals_save, fpath)
+      }
+
     } else {
       df_normals_out <- check
     }
@@ -125,9 +128,10 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
 
   # Add the number of years with 80% of data to the dataframe
   df_nt <- df_normal_time %>%
-    dplyr::full_join(ny_80)
+    dplyr::full_join(ny_80) %>%
+    dplyr::mutate(numberofyears_80_raw = ifelse(is.na(numberofyears_80_raw), 0, numberofyears_80_raw))
 
-  normals <- lapply(unique(df_nt$id),
+  normals <- lapply(unique(data$id),
     calc_norm,
     df_nt,
     df_normal_80, normal_max = normal_max, normal_min = normal_min)
@@ -152,10 +156,16 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
   dfn_80 <- df_normal_80 %>%
     dplyr::filter(id %in% station)
 
+  if (dim(numberofyears_80)[1] == 0) {
+    numberofyears_80_raw <- 0
+  } else {
+    numberofyears_80_raw <- numberofyears_80$numberofyears_80_raw
+  }
+
   # =============================
   # Fill in data depending on how many years of data there are available
   # Is there less than 10 years of data?
-  if (numberofyears_80$numberofyears_80_raw < 10) {
+  if (numberofyears_80_raw < 10) {
 
     data_0t10 <- df_normal_time # Make a new variable to preserve the initial data - years with at least 80% of the data in the snow accumulation period.
 
@@ -171,7 +181,7 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
   }
 
   # Does the station have between 10-20 years of data? If so, extend the dataset using 1) manual dataset (if converted), and 2) adjacent stations
-  if (numberofyears_80$numberofyears_80_raw >= 10 && numberofyears_80$numberofyears_80_raw < 20) {
+  if (numberofyears_80_raw >= 10 && numberofyears_80_raw < 20) {
 
     data_20t10 <- df_normal_time # Make a new variable to preserve the initial data - years with at least 80% of the data in the snow accumulation period.
 
@@ -180,7 +190,7 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
   }
 
   # Does the site have between 20-30 years of data? Don't add in any additional data and jsut calculcate normals from
-  if (numberofyears_80$numberofyears_80_raw >= 20 && numberofyears_80$numberofyears_80_raw <= 30) {
+  if (numberofyears_80_raw >= 20 && numberofyears_80_raw <= 30) {
 
     # DON'T Filter out the years that have less that 80% of the data within the snow accumulation season; Add in correct columns
     all_swe <- df_normal_time %>%
