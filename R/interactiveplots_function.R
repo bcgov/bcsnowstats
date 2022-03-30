@@ -869,7 +869,6 @@ plot_interactive_aswe <- function (path, id, save = "No") {
   # Get statistics data for the site you are plotting
   data_plot_1 <- get_swe(id)
 
-
   # Run function over all sites that you have
   plots <- lapply(unique(id),
                   plot_function,
@@ -877,7 +876,6 @@ plot_interactive_aswe <- function (path, id, save = "No") {
                   save,
                   path)
 
-  return(plots)
 }
 
 # ================
@@ -1001,7 +999,7 @@ plot_climate_aswe <- function(path, id, save = "No") {
         delta_all <- dplyr::full_join(d_all_curr, delta_SWE_full, by = "date_utc")
       }
 
-      if (length(delta_all)[1] > 0) {
+      if (exists("delta_all")) {
         delta_p <- plotly::plot_ly() %>%
           plotly::add_bars(data = subset(delta_all, plus_neg == 'blue'), x = ~date_utc, y = ~deltaSWE_daily_mm, type = 'bar', marker = list(color = "blue"),
               name = "Accumulation") %>%
