@@ -28,7 +28,7 @@ SWE_diff_month <- function(month_select, data){
     dplyr::filter(day %in% c("1", "01", "28", "29", "30", "31")) %>%
     dplyr::arrange(Date)
 
-  if (dim(select_month)[1] > 0){
+  if (dim(select_month)[1] > 0) {
 
    # Figure out the difference in SWE between the first and last day of the mont
    if (max(select_month$day, na.rm = TRUE) == "31") {
@@ -98,8 +98,12 @@ SWE_diff_month <- function(month_select, data){
    df_out$statistics <- delta_stats
    df_out$monthlydata <- data_diff
 
-  return(df_out)
   } else {
+    df_out = NULL
+  }
+
+  if (exists("df_out")) {
+    return(df_out)
   }
 }
 
@@ -168,6 +172,7 @@ SWE_diff_month_current <- function(month_select, data){
       }
 
    } else {
+     data_diff = NULL
    }
 
    if (exists("data_diff")){
@@ -227,12 +232,16 @@ getmonthly_deltaSWE <- function(id) {
 
    watermonths <- c(seq(10,12, by = 1), c("01", "02", "03", "04", "05", "06", "07", "08"))
 
-   station_diff <- lapply(watermonths, SWE_diff_month, data = daily_swe_NA)
+   watermonths_data <- watermonths[watermonths %in% unique(daily_swe_NA$month, na.rm = TRUE)]
+
+   station_diff <- lapply(watermonths_data,
+                          SWE_diff_month,
+                          data = daily_swe_NA)
 
    df_list <- list()
 
    # unlist to get all of the differences by month
-   for (i in 1:length(watermonths)) {
+   for (i in 1:length(watermonths_data)) {
       if (length(station_diff[[i]]$statistics) > 0){
        station_diff_unlist <- do.call("cbind.data.frame", station_diff[[i]]$statistics)
        station_diff_unlist$Station_ID <- id
@@ -246,7 +255,7 @@ getmonthly_deltaSWE <- function(id) {
    # Unlist the data
    df_list_data <- list()
    # unlist to get all of the differences by month
-   for (i in 1:length(watermonths)) {
+   for (i in 1:length(watermonths_data)) {
       if (!is.null(dim(station_diff[[i]]$monthlydata)[1]) && dim(station_diff[[i]]$monthlydata)[1] > 0) {
        temp <- do.call("cbind.data.frame", station_diff[[i]]$monthlydata)
        temp$Station_ID <- id
