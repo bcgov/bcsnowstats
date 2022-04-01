@@ -838,13 +838,21 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
         dplyr::mutate(percentSWE_remaining = percent_SWE_remaining) %>%
         dplyr::mutate(percentpeak_vsnorm = percentpeak_vs_norm) %>%
         dplyr::mutate(percentpeak_vsmedian = percentpeak_vs_median)
-    }
 
-    # Save statistics csv file
-    #if (save == "Yes") {
-    #   stats_path <- gsub("Interactive_plots/", "", path)
-    #   write.csv(stats_out, file = paste0(stats_path, "Stats/", id, ".csv"), row.names = FALSE)
-    # }
+      # Save statistics csv file
+      if (save %in% c("True", "true", "T", "TRUE", TRUE)) {
+
+        # Check that the file folder exists
+        if (file.exists(paste0(path, "Stats"))) {
+          stats_path <- paste0(path, "Stats/")
+          write.csv(stats_out, file = paste0(stats_path, stn_id, ".csv"), row.names = FALSE)
+        } else {
+          stats_path <- paste0(path, "/Stats/")
+          dir.create(paste0(path, "/Stats/"), showWarnings = TRUE, recursive = FALSE, mode = "0777")
+          write.csv(stats_out, file = paste0(stats_path, stn_id, ".csv"), row.names = FALSE)
+        }
+      }
+    }
 
     out <- (list("SWEplot" = p, "stats" = stats_out))
   } else {
@@ -1063,6 +1071,7 @@ plot_interactive_manual <- function(id, path, save = "No"){
 
   if (dim(data_plot_1)[1] <= 1){ # skip the loop if there is no data for the site
     print(paste0("No data returned for site ", station_name))
+    p <- NULL
   } else {
 
    # Get current year and stats
