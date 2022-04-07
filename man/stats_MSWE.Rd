@@ -13,7 +13,8 @@ stats_MSWE(
   normal_min,
   normal_max,
   incorrect_sites = NA,
-  incorrect_data = NA
+  incorrect_data = NA,
+  force = FALSE
 )
 }
 \arguments{
@@ -30,6 +31,8 @@ stats_MSWE(
 \item{incorrect_sites}{Sites that appear to have incorrect data for the survey period and year selected. Defaults to NA}
 
 \item{incorrect_data}{If there appears to be incorrect sites, then the user can input what the SWE data should be (if catalog is wrong)}
+
+\item{force}{whether to force recalculation of normals. Defaults to FALSE}
 }
 \description{
 Function for calculating statistics for a certain time period - i.e., April 1 - for manual stations
