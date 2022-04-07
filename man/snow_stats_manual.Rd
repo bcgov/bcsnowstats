@@ -6,7 +6,7 @@
 Depends on the SWE_normals() function to calculate normals
 January 2021, Ashlee Jollymore}
 \usage{
-snow_stats_manual(data, normal_min, normal_max)
+snow_stats_manual(data, normal_min, normal_max, force)
 }
 \arguments{
 \item{data}{Data that you are calculating statistics for.}
@@ -14,6 +14,8 @@ snow_stats_manual(data, normal_min, normal_max)
 \item{normal_min}{date for the min normal year}
 
 \item{normal_max}{date of the max normal year}
+
+\item{force}{whether to force recalculation of normals. Defaults to FALSE}
 }
 \description{
 Internal function for calculating daily stats for manual sites. Inputs include the data you want to calculate the daily stats for. Including quartiles and stats for all data.
