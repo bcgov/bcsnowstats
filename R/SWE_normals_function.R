@@ -73,11 +73,11 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
 
       data_id <- "swe_mm"
 
-      # filter data for ASWE sites
+      # filter data for manual sites
       data_man <- data_norm %>%
         dplyr::filter(id %in% manual)
 
-      df_normals_man <- manual_normal_prep(data = data_man, normal_max = normal_max, normal_min = normal_min, data_id = data_id)
+      df_normals_man <- manual_normal_prep(data = data_man, normal_max = normal_max, normal_min = normal_min, data_id = data_id, force)
   } else if (id %in% snow_basins()) {
 
      # if you are trying to simply get the normal for the entire basin, take the average across the data
