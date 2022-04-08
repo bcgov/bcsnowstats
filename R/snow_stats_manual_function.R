@@ -18,6 +18,7 @@
 #' @param data Data that you are calculating statistics for.
 #' @param normal_min date for the min normal year
 #' @param normal_max date of the max normal year
+#' @param force whether to force recalculation of normals. Defaults to FALSE
 #' @export
 #' @keywords internal
 #' @examples \dontrun{}
@@ -25,7 +26,7 @@
 # ===================================
 # Calculating statistics for manual stations
 # ===================================
-snow_stats_manual <- function(data, normal_min, normal_max) {
+snow_stats_manual <- function(data, normal_min, normal_max, force) {
 
   # compute historical stats - for each day of the year
   # get historic dataset - previous to this year
@@ -77,8 +78,9 @@ snow_stats_manual <- function(data, normal_min, normal_max) {
   dates <- dplyr::full_join(min_date, max_date, by = c("survey_period", "id"))
   df_stat_1 <- dplyr::full_join(df_stat_date, dates, by = c("survey_period", "id"))
 
-  # Calculate the snow normals - 1981 to 2010 (water year)
-  df_normals_1 <- SWE_normals(data, normal_max, normal_min)
+  # Calculate the snow normals - 1981 to 2010 (water year).
+  df_normals_1 <- SWE_normals(data = data,
+                         normal_max, normal_min, force)
 
   # Merge with stats table
   df_stats_all <- dplyr::full_join(df_stat_1, df_normals_1)
