@@ -24,24 +24,21 @@
 #' @param get_year water year you want to calculate statistics for
 #' @param normal_min minimum year of normal time span
 #' @param normal_max max year of normal time span
+#' @param force whether to force recalculation of normals. Defaults to FALSE
 #' @export
 #' @keywords internal
 #' @examples \dontrun{}
 
-manual_get_stats <- function(data, stations, survey_period, get_year, normal_min, normal_max, ...){
+manual_get_stats <- function(data, stations, survey_period, get_year, normal_min, normal_max, force = FALSE, ...){
 
-  # Filter the entire manual dataset by the stations you are looking for
-  df_tmp <- data %>%
-    dplyr::filter(id %in% stations)
+  data$wr <- bcsnowdata::wtr_yr(dates = data$date_utc)
 
-  df_tmp$wr <- bcsnowdata::wtr_yr(dates = df_tmp$date_utc)
-
-  df_tmp_1 <- df_tmp %>%
-    dplyr::group_by(survey_period, id) %>%
+  df_tmp_1 <- data %>%
+    dplyr::group_by(id, survey_period) %>%
     dplyr::filter(!is.na(swe_mm)) # filter out missing data
 
   # Calculate statistics and normals through function for each survey period
-  df_stat <- snow_stats_manual(data = df_tmp_1, normal_min, normal_max)
+  df_stat <- snow_stats_manual(data = df_tmp_1, normal_min, normal_max, force)
 
   if (dim(df_stat)[1] > 1) {
     # join statistics table with the entire record and calculate percentile for each day
@@ -121,6 +118,7 @@ manual_get_stats <- function(data, stations, survey_period, get_year, normal_min
 
     latest_stats_3 <- dplyr::bind_rows(latest_stats_2, as.data.frame(entry))
   } else {
-    latest_stats_3 <- latest_stats_2
+    latest_stats_3 <- latest_stats_2 %>%
+      dplyr::arrange(id)
   }
 } # end of function
