@@ -12,7 +12,7 @@ get_snow_stats(
   get_year,
   normal_min,
   normal_max,
-  force = TRUE
+  force = FALSE
 )
 }
 \arguments{
@@ -25,6 +25,8 @@ get_snow_stats(
 \item{normal_min}{Water year that the normal date range begins}
 
 \item{normal_max}{Water year that the normal date range ends}
+
+\item{force}{whether to force recalculation of normals. Defaults to FALSE}
 
 \item{incorrect_sites}{Sites that appear to have incorrect data for the survey period and year selected. Defaults to NA}
 
