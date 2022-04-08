@@ -27,6 +27,7 @@
 #' @param normal_max Water year that the normal date range ends
 #' @param incorrect_sites Sites that appear to have incorrect data for the survey period and year selected. Defaults to NA
 #' @param incorrect_data If there appears to be incorrect sites, then the user can input what the SWE data should be (if catalog is wrong)
+#' @param force whether to force recalculation of normals. Defaults to FALSE
 #' @export
 #' @keywords internal
 #' @examples \dontrun{}
@@ -34,7 +35,8 @@
 stats_MSWE <- function(station_id, survey_period,
                        get_year = "All",
                        normal_min, normal_max,
-                       incorrect_sites = NA, incorrect_data = NA) {
+                       incorrect_sites = NA, incorrect_data = NA,
+                       force = FALSE) {
 
   # Retrieve data for the stations. Don't use caching
   manual_snow <- bcsnowdata::get_manual_swe(station_id = station_id,
@@ -79,14 +81,11 @@ stats_MSWE <- function(station_id, survey_period,
   }
 
   # use get_percentile function to calculate statistics for the dates and stations specified
-  list_stats <- lapply(stations, manual_get_stats,
+  df_final_1 <- manual_get_stats(stations = stations,
                       data = manual_snow,
                       survey_period = survey_period,
                       get_year = get_year,
-                      normal_min, normal_max)
-
-  # unfold the list you created
-  df_final_1 <- do.call(dplyr::bind_rows, list_stats)
+                      normal_min, normal_max, force)
 
   # create an empty row for stations that did not return any data for the period specified
   if (!isTRUE(all.equal(stations, unique(df_final_1$id))) | !is.data.frame(df_final_1)) {
