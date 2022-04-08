@@ -13,6 +13,7 @@ manual_get_stats(
   get_year,
   normal_min,
   normal_max,
+  force = FALSE,
   ...
 )
 }
@@ -28,6 +29,8 @@ manual_get_stats(
 \item{normal_min}{minimum year of normal time span}
 
 \item{normal_max}{max year of normal time span}
+
+\item{force}{whether to force recalculation of normals. Defaults to FALSE}
 }
 \description{
 Function for calling withing lapply to calculate statistics for each station - manual stations. Internal function
