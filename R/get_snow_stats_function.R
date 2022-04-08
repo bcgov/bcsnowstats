@@ -21,11 +21,12 @@
 #' @param normal_max Water year that the normal date range ends
 #' @param incorrect_sites Sites that appear to have incorrect data for the survey period and year selected. Defaults to NA
 #' @param incorrect_data If there appears to be incorrect sites, then the user can input what the SWE data should be (if catalog is wrong)
+#' @param force whether to force recalculation of normals. Defaults to FALSE
 #' @export
 #' @keywords Retrieve snow statistics
 #' @examples \dontrun{}
 
-get_snow_stats <- function(station_id = c("all", "aswe", "manual"), survey_period, get_year, normal_min, normal_max, force = TRUE) {
+get_snow_stats <- function(station_id = c("all", "aswe", "manual"), survey_period, get_year, normal_min, normal_max, force = FALSE) {
 
   aswe <- bcsnowdata::snow_auto_location()$LOCATION_ID
   man <- bcsnowdata::snow_manual_location()$LOCATION_ID
@@ -63,7 +64,8 @@ get_snow_stats <- function(station_id = c("all", "aswe", "manual"), survey_perio
                survey_period = survey_period,
                get_year = get_year,
                normal_min = normal_min,
-               normal_max = normal_max)
+               normal_max = normal_max,
+               force = force)
   }
   # Bind together
   if (exists("df_aswe") && exists("df_manual")) {
