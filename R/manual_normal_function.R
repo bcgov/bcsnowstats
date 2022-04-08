@@ -33,7 +33,8 @@ manual_normal <- function(data) {
                            dplyr::summarise(data, normal_Q90 = quantile(swe_fornormal,0.90, na.rm = TRUE), .groups = "keep"),
                            dplyr::summarise(data, normal_maximum = max(swe_fornormal, na.rm = TRUE), .groups = "keep"))) %>%
   dplyr::select(-survey_period.1, -survey_period.2, -survey_period.3, -survey_period.4, -survey_period.5, -survey_period.6, -survey_period.7, -survey_period.8) %>%
-  #dplyr::mutate(Data_Range_normal = (paste0(round(normal_minimum, digits = 0), ' to ', round(normal_maximum, digits = 0)))) %>%
+  dplyr::select(-id.1, -id.2, -id.3, -id.4, -id.5, -id.6, -id.7, -id.8) %>%
+   #dplyr::mutate(Data_Range_normal = (paste0(round(normal_minimum, digits = 0), ' to ', round(normal_maximum, digits = 0)))) %>%
   dplyr::mutate(data_range_normal = (paste0(min(lubridate::year(data$date_utc), na.rm = TRUE), " to ", max(lubridate::year(data$date_utc), na.rm = TRUE))))
 
  # Return the data range for the raw and estimated data used to calculate normals - by survey date
@@ -42,7 +43,7 @@ manual_normal <- function(data) {
    unique()
 
  # Join with normals
- df_normals_y <- dplyr::full_join(df_normals, years, by = "survey_period")
+ df_normals_y <- dplyr::full_join(df_normals, years)
 
  # get the day of the max and min!! Only use real data, not estimated
  min_date <- data %>%
@@ -60,6 +61,6 @@ manual_normal <- function(data) {
   dplyr::rename(date_max_normal_utc = date_utc)
 
  # append to data
- dates <- dplyr::full_join(min_date, max_date, by = c("id", "survey_period"))
- df_normals_out <- dplyr::full_join(df_normals_y, dates, by = c("survey_period"))
+ dates <- dplyr::full_join(min_date, max_date)
+ df_normals_out <- dplyr::full_join(df_normals_y, dates)
 }
