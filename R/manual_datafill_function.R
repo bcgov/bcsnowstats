@@ -44,9 +44,9 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
 
  # plot to test and check
  # ggplot() +
-  #  geom_sf(data = location_station, color = "orange") +
-  #  geom_sf(data = manual_100km, color = "black") +
-  #  geom_sf(data = fr_buffer, fill = NA)
+ #    geom_sf(data = location_station, color = "orange") +
+ #    geom_sf(data = manual_100km, color = "black") +
+ #    geom_sf(data = fr_buffer, fill = NA)
 
  # If there are manual sites within a 100 km radius, the, proceed with the normal ratio method to backfill missing data
  if (length(unique(manual_100km$LOCATION_ID)) > 0) {
@@ -166,7 +166,7 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
        dplyr::select(survey_period, numberofyears_estimated) %>%
        unique()
 
-     all_swe_p <- dplyr::full_join(all_swe_p, num_obs_pred, by = "survey_period")
+     all_swe_p <- dplyr::full_join(all_swe_p, num_obs_pred)
 
      # Bind to the dataframe containing the survey periods with sufficient time
      all_swe <- dplyr::full_join(all_swe_p, data %>%
@@ -176,12 +176,7 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
 
      # Calculate normal values from the simulated/augmented dataset
      # Only calculate normals for survey periods that now have 20+ years of data (raw + predicted)
-     all_swe_1 <- dplyr::full_join(all_swe, num_obs, by = "survey_period") %>%
-      #dplyr::rename(numberofyears_raw = number_of_observations) %>%
-      dplyr::mutate(numberofyears_raw = ifelse(!is.na(numberofyears_raw.x), numberofyears_raw.x, numberofyears_raw.y)) %>%
-      dplyr::select(-numberofyears_raw.x, -numberofyears_raw.y) #%>%
-      #dplyr::mutate(numberofyears_estimated = ifelse(!is.na(numberofyears_estimated), numberofyears_estimated, numberofyears_raw)) %>%
-      #dplyr::select(-percent_available)
+     all_swe_1 <- dplyr::full_join(all_swe, num_obs)
 
      all_swe_1$snow_course_name <- zoo::na.locf(all_swe_1$snow_course_name, fromLast = TRUE, na.rm = F)
      all_swe_1$id <- zoo::na.locf(all_swe_1$id, fromLast = TRUE, na.rm = F)
