@@ -563,8 +563,9 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
     # ======================
     # plot the SWE across the entire period
     # =======================
-    p <- plotly::plot_ly() %>%
-      plotly::add_ribbons(data = bands,
+    if (dim(d_all_stats)[1] > 0) {
+      p <- plotly::plot_ly() %>%
+        plotly::add_ribbons(data = bands,
                           x = bands$date_utc,
                           ymax = bands$max,
                           ymin = bands$Q90,
@@ -572,7 +573,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                           opacity = 0.2,
                           line = list(color = colour_p()$colour_hex[9], opacity = 1, width = 2),
                           name = 'Max - Q90') %>%
-      plotly::add_ribbons(data = bands,
+        plotly::add_ribbons(data = bands,
                           x = bands$date_utc,
                           ymin = bands$Q75,
                           ymax = bands$Q90,
@@ -580,7 +581,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                           line = list(color = colour_p()$colour_hex[8], opacity = 1, width = 2),
                           opacity = 0.2,
                           name = 'Q90 - Q75') %>%
-      plotly::add_ribbons(data = bands,
+        plotly::add_ribbons(data = bands,
                           x = bands$date_utc,
                           ymin = bands$Q50,
                           ymax = bands$Q75,
@@ -588,7 +589,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                           line = list(color = colour_p()$colour_hex[7], opacity = 1, width = 2),
                           opacity = 0.2,
                           name = 'Q75 - Q50') %>%
-      plotly::add_ribbons(data = bands,
+        plotly::add_ribbons(data = bands,
                           x = bands$date_utc,
                           ymin = bands$Q25,
                           ymax = bands$Q50,
@@ -596,7 +597,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                           line = list(color = colour_p()$colour_hex[6], opacity = 1, width = 2),
                           opacity = 0.5,
                           name = 'Q50 - Q25') %>%
-      plotly::add_ribbons(data = bands,
+        plotly::add_ribbons(data = bands,
                           x = bands$date_utc,
                           ymin = bands$Q10,
                           ymax = bands$Q25,
@@ -604,7 +605,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                           line = list(color = colour_p()$colour_hex[3], opacity = 1, width = 2),
                           opacity = 0.2,
                           name = 'Q25 - Q10') %>%
-      plotly::add_ribbons(data = bands,
+        plotly::add_ribbons(data = bands,
                           x = bands$date_utc,
                           ymin = bands$min,
                           ymax = bands$Q10,
@@ -612,8 +613,8 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                           line = list(color = colour_p()$colour_hex[2], opacity = 1, width = 2),
                           opacity = 0.2,
                           name = 'Min - Q10') %>%
-      # stats
-      plotly::add_trace(data = subset(d_all_stats, variable == "max"), x = ~date_utc, y = ~as.numeric(value_5),
+        # stats
+        plotly::add_trace(data = subset(d_all_stats, variable == "max"), x = ~date_utc, y = ~as.numeric(value_5),
                         legendgroup = 'Statistics (Max, Q75, Q25, Min)',
                         showlegend = TRUE,
                         type = 'scatter',
@@ -622,7 +623,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                         color = 'Stats (Max, Q75, Q25, Min)',
                         line = list(color = "rgb(130,130,130)",
                                     width = 2, dash = 'dashdot')) %>%
-      plotly::add_trace(data = subset(d_all_stats, variable == "min"), x = ~date_utc, y = ~as.numeric(value_5),
+        plotly::add_trace(data = subset(d_all_stats, variable == "min"), x = ~date_utc, y = ~as.numeric(value_5),
                         legendgroup = 'Statistics (Max, Q75, Q25, Min)',
                         showlegend = F,
                         type = 'scatter',
@@ -630,7 +631,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                         connectgaps = FALSE,
                         #color = ~variable,
                         line = list(color = "rgb(130,130,130)", width = 2, dash = 'dashdot')) %>%
-      plotly::add_trace(data = subset(d_all_stats, variable == "Q25"), x = ~date_utc, y = ~as.numeric(value_5),
+        plotly::add_trace(data = subset(d_all_stats, variable == "Q25"), x = ~date_utc, y = ~as.numeric(value_5),
                         legendgroup = 'Statistics (Max, Q75, Q25, Min)',
                         showlegend = F,
                         type = 'scatter', mode = 'lines',
@@ -638,7 +639,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                         #color = ~variable,
                         line = list(color = "rgb(153,204,255)",
                                     width = 2, dash = 'dashdot')) %>%
-      plotly::add_trace(data = subset(d_all_stats, variable == "Q75"), x = ~date_utc, y = ~as.numeric(value_5),
+        plotly::add_trace(data = subset(d_all_stats, variable == "Q75"), x = ~date_utc, y = ~as.numeric(value_5),
                         legendgroup = 'Statistics (Max, Q75, Q25, Min)',
                         showlegend = F,
                         type = 'scatter', mode = 'lines',
@@ -646,28 +647,27 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                         #color = ~variable,
                         line = list(color = "rgb(153,204,255)",
                                     width = 2, dash = 'dashdot')) %>%
-      plotly::layout(showlegend = T) %>%
-      plotly::add_trace(data = subset(d_all_stats, variable == "Normal (1981-2010)"), x = ~date_utc, y = ~as.numeric(value_5),
+        plotly::layout(showlegend = T) %>%
+        plotly::add_trace(data = subset(d_all_stats, variable == "Normal (1981-2010)"), x = ~date_utc, y = ~as.numeric(value_5),
                         type = 'scatter', mode = 'lines',
                         connectgaps = FALSE,
                         color = ~variable,
                         line = list(color = colour_p()$colour_norm,
                                     width = 2, dash = 'dash'))  %>% # normal
-      plotly::add_trace(data = subset(d_all_stats, variable == "Median"), x = ~date_utc, y = ~as.numeric(value_5),
+        plotly::add_trace(data = subset(d_all_stats, variable == "Median"), x = ~date_utc, y = ~as.numeric(value_5),
                         type = 'scatter', mode = 'lines',
                         connectgaps = FALSE,
                         color = ~variable,
                         line = list(color = "rgb(130,130,130)",
                                     width = 3, dash = 'dashdot'))  %>% # median (Q50)
-      # current year data
-      plotly::add_trace(data = d_all_curr, x = ~date_utc, y = ~value, type = 'scatter', mode = 'lines',
+        # current year data
+        plotly::add_trace(data = d_all_curr, x = ~date_utc, y = ~value, type = 'scatter', mode = 'lines',
                         connectgaps = FALSE,
                         showlegend = TRUE,
                         color = ~variable,
-                        line = list(color = "black", width = 4)
-      ) %>% # current year
-      # past year data
-      plotly::add_trace(data = d_historic,
+                        line = list(color = "black", width = 4)) %>%
+        # past year data
+        plotly::add_trace(data = d_historic,
                         x = ~Date_art,
                         y = ~swe_mm,
                         type = 'scatter',
@@ -677,8 +677,31 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                         visible = "legendonly",
                         name = ~wr,
                         #color = ~wr,
-                        line = list(color = viridis::viridis(1000), width = 3)) %>%
-      plotly::layout(autosize = T,
+                        line = list(color = viridis::viridis(1000), width = 3))
+      } else {
+        # If there is only this year's data
+        p <- plotly::plot_ly() %>%
+          plotly::add_trace(data = d_all_curr, x = ~date_utc, y = ~value, type = 'scatter', mode = 'lines',
+                          connectgaps = FALSE,
+                          showlegend = TRUE,
+                          color = ~variable,
+                          line = list(color = "black", width = 4)) %>%
+          # past year data
+          plotly::add_trace(data = d_historic,
+                            x = ~Date_art,
+                            y = ~swe_mm,
+                            type = 'scatter',
+                            mode = 'lines',
+                            connectgaps = FALSE,
+                            showlegend = TRUE,
+                            visible = "legendonly",
+                            name = ~wr,
+                            #color = ~wr,
+                            line = list(color = viridis::viridis(1000), width = 3))
+      }
+
+      p <- p %>%
+        plotly::layout(autosize = T,
                      title = paste0('SWE (mm) for ', station_name, ", ", stn_id),
                      margin = list(l=30, r=30, b=55, t=30, pad=0),
                      xaxis = list(
@@ -688,9 +711,9 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                        range = c(min(d_all_stats$date_utc), max(d_all_stats$date_utc)),
                        tickformat = "%d-%B"),
                      yaxis = list(title = 'SWE (mm)')) %>%
-      plotly::layout(annotations = list(
-        list(x = 0 , y = 1, text = paste0("Elevation (m): ", el_site, " | Owned by: ", owned_by, " | Year established: ", year_est, " | Basin = ", basin), showarrow = F, xref='paper', yref='paper'),
-        list(x = 0 , y = 0.98, text = paste0("Current % of normal (1981-2010): ", percent_normal_mean, " | Current % of median: ", percent_median), showarrow = F, xref='paper', yref='paper'),
+        plotly::layout(annotations = list(
+          list(x = 0 , y = 1, text = paste0("Elevation (m): ", el_site, " | Owned by: ", owned_by, " | Year established: ", year_est, " | Basin = ", basin), showarrow = F, xref='paper', yref='paper'),
+          list(x = 0 , y = 0.98, text = paste0("Current % of normal (1981-2010): ", percent_normal_mean, " | Current % of median: ", percent_median), showarrow = F, xref='paper', yref='paper'),
         list(x = 0 , y = 0.96, text = paste0("% of normal peak: ", percent_normal_peak, " | Typical % of peak accumulation for today: ", typical_percentnorm), showarrow = F, xref='paper', yref='paper'),
         list(x = 0 , y = 0.94, text = paste0("Day of peak: ", day_peak[1], " | Days until normal peak: ", days_till_peak), showarrow = F, xref='paper', yref='paper'),
         list(x = 0 , y = 0.92, text = paste0("Percentile Rank: ", percentile_today, "th"), showarrow = F, xref='paper', yref='paper'),
@@ -1053,7 +1076,7 @@ plot_climate_aswe <- function(path, id, save = "No") {
 #' @export
 #' @keywords plot manual SWE
 #' @examples \dontrun{}
-plot_interactive_manual <- function(id, path, save = "No"){
+plot_interactive_manual <- function(id, path, save = "No") {
 
   # Get the data with statistics for the manual site you are interested in
   data_plot_1 <- get_snow_stats(station_id = id,
@@ -1062,288 +1085,291 @@ plot_interactive_manual <- function(id, path, save = "No"){
                                 normal_min = 1991,
                                 normal_max = 2020,
                                 force = FALSE)
+  # Plot with function
+  p <- do.call(rbind, lapply(id, plot_manual, data_plot_1, save, path))
+
+  p
+}
+
+plot_manual <- function(station, data_plot_1, save, path) {
+  df_p <- data_plot_1 %>%
+    dplyr::filter(id %in% station)
 
   #Isolate only the name
-  station_name <- unique(data_plot_1$snow_course_name)[!is.na(unique(data_plot_1$snow_course_name))]
+  station_name <- unique(df_p$snow_course_name)[!is.na(unique(df_p$snow_course_name))]
 
   water_year <- bcsnowdata::wtr_yr(Sys.Date())
-  data_plot_1 <- round_df(x = data_plot_1, digits = 0) # round all numerics within data to the nearest whole number
+  df_p <- round_df(x = df_p, digits = 0) # round all numerics within data to the nearest whole number
 
-  if (dim(data_plot_1)[1] <= 1){ # skip the loop if there is no data for the site
+  if (dim(df_p)[1] <= 1) { # skip the loop if there is no data for the site
     print(paste0("No data returned for site ", station_name))
     p <- NULL
   } else {
 
-   # Get current year and stats
-   data_plot_current <- data_plot_1 %>%
-    dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
-    dplyr::filter(wr == bcsnowdata::wtr_yr(Sys.Date())) %>%
-    dplyr::ungroup() %>%
-    dplyr::select("date_utc", "swe_mm") %>%
-    dplyr::mutate(date_utc = as.Date(date_utc))
+    # Get current year and stats
+    data_plot_current <- df_p %>%
+      dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
+      dplyr::filter(wr == bcsnowdata::wtr_yr(Sys.Date())) %>%
+      dplyr::ungroup() %>%
+      dplyr::select("date_utc", "swe_mm") %>%
+      dplyr::mutate(date_utc = as.Date(date_utc))
 
-   # =================
-   # Historic data
-   # =================
-   data_plot_historic <- data_plot_1 %>%
-    dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
-    dplyr::ungroup() %>%
-    dplyr::select("date_utc", "swe_mm", wr, "survey_period") %>%
-    dplyr::mutate(date_utc = as.Date(date_utc)) %>%
-    dplyr::mutate(year = lubridate::year(date_utc)) %>%
-    dplyr::mutate(month = lubridate::month(date_utc)) %>%
-    dplyr::group_by(wr) %>%
-    dplyr::mutate(year_art = ifelse(month >=10, water_year-1, water_year)) %>%
-    dplyr::mutate(Date_art = as.Date(paste0(lubridate::day(date_utc), "-", lubridate::month(date_utc), "-", year_art),
-                                     format = "%d-%m-%Y")) %>%
-    dplyr::select(-year_art, -month) %>%
-    dplyr::ungroup()  %>%
-    dplyr::mutate(year = as.factor(year)) %>%
-    dplyr::filter(wr < lubridate::year(Sys.Date())) %>%
-    dplyr::mutate(wr = as.factor(wr)) %>%
-    #dplyr::mutate(Date = format(date_utc, format = "%d-%b")) %>%
-    dplyr::arrange(desc(year)) %>% # attempt to re-arrrange plots so that current years are first
-    dplyr::mutate(year_plot = factor(wr, levels = rev(levels(wr)))) %>%
-    dplyr::arrange(desc(wr), desc(date_utc))
+    # =================
+    # Historic data
+    # =================
+    data_plot_historic <- df_p %>%
+      dplyr::mutate(wr = bcsnowdata::wtr_yr(date_utc)) %>%
+      dplyr::ungroup() %>%
+      dplyr::select("date_utc", "swe_mm", wr, "survey_period") %>%
+      dplyr::mutate(date_utc = as.Date(date_utc)) %>%
+      dplyr::mutate(year = lubridate::year(date_utc)) %>%
+      dplyr::mutate(month = lubridate::month(date_utc)) %>%
+      dplyr::group_by(wr) %>%
+      dplyr::mutate(year_art = ifelse(month >=10, water_year-1, water_year)) %>%
+      dplyr::mutate(Date_art = as.Date(paste0(lubridate::day(date_utc), "-", lubridate::month(date_utc), "-", year_art),
+                                       format = "%d-%m-%Y")) %>%
+      dplyr::select(-year_art, -month) %>%
+      dplyr::ungroup()  %>%
+      dplyr::mutate(year = as.factor(year)) %>%
+      dplyr::filter(wr < lubridate::year(Sys.Date())) %>%
+      dplyr::mutate(wr = as.factor(wr)) %>%
+      #dplyr::mutate(Date = format(date_utc, format = "%d-%b")) %>%
+      dplyr::arrange(desc(year)) %>% # attempt to re-arrrange plots so that current years are first
+      dplyr::mutate(year_plot = factor(wr, levels = rev(levels(wr)))) %>%
+      dplyr::arrange(desc(wr), desc(date_utc))
 
-   # =================
-   # Statistics data
-   # =================
-   data_statistics <- data_plot_1 %>%
-    dplyr::select(id, survey_period, normal_mm, min, swe_mean, Q5, Q10, Q25, Q50, Q75, Q90, max, data_range, numberofyears) %>%
-    dplyr::distinct_all() %>%
-    dplyr::mutate(Date = paste0(survey_period, "-", bcsnowdata::wtr_yr(Sys.Date()))) %>%
-    dplyr::mutate(Date = as.Date(Date, format = "%d-%b-%Y")) %>%
-    dplyr::ungroup()
+    # =================
+    # Statistics data
+    # =================
+    data_statistics <- df_p %>%
+      dplyr::select(id, survey_period, normal_mm, min, swe_mean, Q5, Q10, Q25, Q50, Q75, Q90, max, data_range, numberofyears) %>%
+      dplyr::distinct_all() %>%
+      dplyr::mutate(Date = paste0(survey_period, "-", bcsnowdata::wtr_yr(Sys.Date()))) %>%
+      dplyr::mutate(Date = as.Date(Date, format = "%d-%b-%Y")) %>%
+      dplyr::ungroup()
 
-   data_stats_melt <- data_statistics %>%
-    dplyr::select(-data_range, -numberofyears, -normal_mm, -survey_period, -swe_mean, -Q5) %>%
-    reshape2::melt(id = c("Date", "id")) %>%
-    dplyr::mutate(point_colour = dplyr::case_when(
-     variable == "min" ~ colour_p()$colour_hex[2],
-     variable == "Q10" ~ colour_p()$colour_hex[2],
-     variable == "Q25" ~ colour_p()$colour_hex[3],
-     variable == "Q50" ~ colour_p()$colour_hex[6],
-     variable == "Q75" ~ colour_p()$colour_hex[7],
-     variable == "Q90" ~ colour_p()$colour_hex[8],
-     variable == "max" ~ colour_p()$colour_hex[9])) %>%
-    dplyr::arrange(variable, Date)
+    data_stats_melt <- data_statistics %>%
+      dplyr::select(-data_range, -numberofyears, -normal_mm, -survey_period, -swe_mean, -Q5) %>%
+      reshape2::melt(id = c("Date", "id")) %>%
+      dplyr::mutate(point_colour = dplyr::case_when(
+        variable == "min" ~ colour_p()$colour_hex[2],
+        variable == "Q10" ~ colour_p()$colour_hex[2],
+        variable == "Q25" ~ colour_p()$colour_hex[3],
+        variable == "Q50" ~ colour_p()$colour_hex[6],
+        variable == "Q75" ~ colour_p()$colour_hex[7],
+        variable == "Q90" ~ colour_p()$colour_hex[8],
+        variable == "max" ~ colour_p()$colour_hex[9])) %>%
+      dplyr::arrange(variable, Date)
 
-   # =================
-   # Plot Annotations
-   # =================
-   elevation <- unique(data_plot_1$elev_metres)[1]
+    # =================
+    # Plot Annotations
+    # =================
+    elevation <- unique(df_p$elev_metres)[1]
 
-   # Not owned by anybody. Maintained by?
-   #owned_by <- subset(meta, ID == id)$OWNER
+    # Not owned by anybody. Maintained by?
+    #owned_by <- subset(meta, ID == id)$OWNER
 
-   year_est <- lubridate::year(unique(min(data_plot_1$date_utc)))
-   # basin # Basin
-   basin <- basin_name(id, basin = "All")
-   basin <- gsub("([[:lower:]])([[:upper:]][[:lower:]])", "\\1 \\2", as.character(basin[1,1]))
-   percent_normal <- data.table::last(data_plot_1$percent_normal_mean)
-   percent_median <- data.table::last(data_plot_1$percent_normal_median)
+    year_est <- lubridate::year(unique(min(df_p$date_utc)))
+    # basin # Basin
+    basin <- basin_name(station, basin = "All")
+    basin <- gsub("([[:lower:]])([[:upper:]][[:lower:]])", "\\1 \\2", as.character(basin[1,1]))
+    percent_normal <- data.table::last(df_p$percent_normal_mean)
+    percent_median <- data.table::last(df_p$percent_normal_median)
 
-   # Is it useful to actually look at the days until peak?
-   #day_peak[1] <-
-   #days_till_peak
-   percentile_last <- data_plot_1$percentile[dim(data_plot_1)[1]]
-   date_percentile <- data_plot_1$date_utc[dim(data_plot_1)[1]]
+    percentile_last <- df_p$percentile[dim(df_p)[1]]
+    date_percentile <- df_p$date_utc[dim(df_p)[1]]
 
-   # =================
-   # Do plot
-   # =================
-
-   p <- plotly::plot_ly() %>%
-     plotly::add_ribbons(data = data_statistics,
-                x = data_statistics$Date,
-                ymax = data_statistics$max,
-                ymin = data_statistics$Q90,
-                connectgaps = TRUE,
-                fillcolor = list(color = colour_p()$colour_hex[9], opacity = 0),
-                opacity = 0.5,
-                line = list(color = colour_p()$colour_hex[9], opacity = 1, width = 2),
-                name = 'Max - Q90') %>%
-     plotly::add_ribbons(data = data_statistics,
-                x = data_statistics$Date,
-                ymin = data_statistics$Q75,
-                ymax = data_statistics$Q90,
-                connectgaps = TRUE,
-                fillcolor = list(color = colour_p()$colour_hex[8], opacity = 0.9),
-                line = list(color = colour_p()$colour_hex[8], opacity = 1, width = 2),
-                opacity = 0.5,
-                name = 'Q90 - Q75') %>%
-     plotly::add_ribbons(data = data_statistics,
-                x = data_statistics$Date,
-                ymin = data_statistics$Q50,
-                ymax = data_statistics$Q75,
-                connectgaps = TRUE,
-                fillcolor = list(color = colour_p()$colour_hex[7], opacity = 0.9),
-                line = list(color = colour_p()$colour_hex[7], opacity = 1, width = 2),
-                opacity = 0.5,
-                name = 'Q75 - Q50') %>%
-     plotly::add_ribbons(data = data_statistics,
-                x = data_statistics$Date,
-                ymin = data_statistics$Q25,
-                ymax = data_statistics$Q50,
-                connectgaps = TRUE,
-                fillcolor = list(color = colour_p()$colour_hex[6], opacity = 0.9),
-                line = list(color = colour_p()$colour_hex[6], opacity = 1, width = 2),
-                opacity = 0.6,
-                name = 'Q50 - Q25') %>%
-     plotly::add_ribbons(data = data_statistics,
-                x = data_statistics$Date,
-                ymin = data_statistics$Q10,
-                ymax = data_statistics$Q25,
-                connectgaps = TRUE,
-                fillcolor = list(color = colour_p()$colour_hex[3], opacity = 0.9),
-                line = list(color = colour_p()$colour_hex[3], opacity = 1, width = 2),
-                opacity = 0.5,
-                name = 'Q25 - Q10') %>%
-     plotly::add_ribbons(data = data_statistics,
-                x = data_statistics$Date,
-                ymin = data_statistics$min,
-                ymax = data_statistics$Q10,
-                connectgaps = TRUE,
-                fillcolor = list(color = colour_p()$colour_hex[2], opacity = 0.9),
-                line = list(color = colour_p()$colour_hex[2], opacity = 1, width = 2),
-                opacity = 0.5,
-                name = 'Min - Q10') %>%
-    # stats
-     plotly::add_trace(data = subset(data_stats_melt, variable == "min"),
-              x = ~Date,
-              y = ~value,
-              type = 'scatter',
-              mode = 'lines+markers',
-              connectgaps = FALSE,
-              #color = ~variable,
-              #colors = ~point_colour,
-              name = "Minimum",
-              marker = list(color = colour_p()$colour_hex[2],
-                            size = 10,
-                            opacity = 0.8),
-              line = list(color = colour_p()$colour_hex[2],
-                          width = 2,
-                          dash = 'dashdot',
-                          opacity = 0.9)) %>%
-     plotly::add_trace(data = subset(data_stats_melt, variable == "max"),
-              x = ~Date,
-              y = ~value,
-              type = 'scatter',
-              mode = 'lines+markers',
-              connectgaps = FALSE,
-              #color = ~variable,
-              #colors = ~point_colour,
-              name = "Maximum",
-              marker = list(color = colour_p()$colour_hex[9],
-                            size = 10,
-                            opacity = 0.8),
-              line = list(color = colour_p()$colour_hex[9],
-                          width = 2,
-                          dash = 'dashdot',
-                          opacity = 0.9)) %>%
-     plotly::add_trace(data = subset(data_stats_melt, variable == "Q25"),
-              x = ~Date,
-              y = ~value,
-              type = 'scatter',
-              mode = 'lines+markers',
-              connectgaps = FALSE,
-              #color = ~variable,
-              #colors = ~point_colour,
-              name = "25th Percentile",
-              marker = list(color = colour_p()$colour_hex[6],
-                            size = 10,
-                            opacity = 0.8),
-              line = list(color = colour_p()$colour_hex[6],
-                          width = 2,
-                          dash = 'dashdot',
-                          opacity = 0.9)) %>%
-     plotly::add_trace(data = subset(data_stats_melt, variable == "Q75"),
-              x = ~Date,
-              y = ~value,
-              type = 'scatter',
-              mode = 'lines+markers',
-              connectgaps = FALSE,
-              #color = ~variable,
-              #colors = ~point_colour,
-              name = "75th Percentile",
-              marker = list(color = colour_p()$colour_hex[7],
-                            size = 10,
-                            opacity = 0.8),
-              line = list(color = colour_p()$colour_hex[7],
-                          width = 2,
-                          dash = 'dashdot',
-                          opacity = 0.9)) %>%
-     plotly::add_trace(data = subset(data_stats_melt, variable == "Q50"),
-                x = ~Date, y = ~value,
-                type = 'scatter',
-                mode = 'lines+markers',
-                connectgaps = FALSE,
-                name = "Median",
-                marker = list(color = "rgb(130,130,130)",
-                            size = 10,
-                            opacity = 0.8),
-                line = list(color = "rgb(130,130,130)",
-                            width = 2,
-                            dash = 'dashdot',
-                            opacity = 0.9)) %>%
-     # current year data
-     plotly::add_trace(data = data_plot_current,
-              x = ~date_utc,
-              y = ~swe_mm,
-              type = 'scatter',
-              mode = 'lines+markers',
-              connectgaps = TRUE,
-              name = "Current year",
-              #color = ~variable,
-              marker = list(color = "black",
-                            size = 10,
-                            width = 4),
-              line = list(color = "black",
-                          width = 3,
-                          dash = 'dashdot')) %>%
-     # past year data
-     plotly::add_trace(data = data_plot_historic,
-              x = ~Date_art,
-              y = ~swe_mm,
-              type = 'scatter',
-              mode = 'lines+markers',
-              connectgaps = TRUE,
-              showlegend = TRUE, visible = "legendonly",
-              color = ~year_plot,
-              marker = list(size = 10,
-                            width = 4),
-              line = list(width = 3,
-                          dash = 'dashdot')) %>%
-     plotly::layout(title = paste0('Manual SWE (mm) for ', station_name, ", ", id),
-           margin = list(l=30, r=30, b=80, t=30, pad=0),
-           xaxis = list(
-             title = paste0(annotation()),
-             titlefont = list(size=8),
-             automargin = TRUE,
-             type = 'date',
-             #range = c(min(df.tmp.1$DATE), max(df.tmp.1$DATE)),
-             tickformat = "%d-%B"),
-           yaxis = list(title = 'SWE (mm)')) %>%
-     plotly::layout(annotations = list(
-      list(x = 0 , y = 1, text = paste0("Elevation (m): ", elevation, " | Owned by: ",  " | Year established: ", year_est, " | Basin = ", basin), showarrow = F, xref='paper', yref='paper'),
-      list(x = 0 , y = 0.98, text = paste0("Current % of normal (1981-2010): ", percent_normal, " | Current % of median: ", percent_median), showarrow = F, xref='paper', yref='paper'),
-      #list(x = 0 , y = 0.96, text = paste0("% of normal peak: ", percent_normal_peak, " | Typical % of peak accumulation for today: ", typical_percentnorm), showarrow = F, xref='paper', yref='paper'),
-      #list(x = 0 , y = 0.94, text = paste0("Day of peak: ", day_peak[1], " | Days until normal peak: ", days_till_peak), showarrow = F, xref='paper', yref='paper'),
-      list(x = 0 , y = 0.96, text = paste0("Percentile Rank: ", percentile_last, "th | Survey date of percentile: ", date_percentile), showarrow = F, xref='paper', yref='paper'),
-      list(x = 0 , y = 0.94, text = paste0("*Statistics smoothed by 5-day average | Updated: ", Sys.Date()), showarrow = F, xref='paper', yref='paper')))
+    # =================
+    # Do plot
+    # =================
+    p <- plotly::plot_ly() %>%
+      plotly::add_ribbons(data = data_statistics,
+                          x = data_statistics$Date,
+                          ymax = data_statistics$max,
+                          ymin = data_statistics$Q90,
+                          connectgaps = TRUE,
+                          fillcolor = list(color = colour_p()$colour_hex[9], opacity = 0),
+                          opacity = 0.5,
+                          line = list(color = colour_p()$colour_hex[9], opacity = 1, width = 2),
+                          name = 'Max - Q90') %>%
+      plotly::add_ribbons(data = data_statistics,
+                          x = data_statistics$Date,
+                          ymin = data_statistics$Q75,
+                          ymax = data_statistics$Q90,
+                          connectgaps = TRUE,
+                          fillcolor = list(color = colour_p()$colour_hex[8], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[8], opacity = 1, width = 2),
+                          opacity = 0.5,
+                          name = 'Q90 - Q75') %>%
+      plotly::add_ribbons(data = data_statistics,
+                          x = data_statistics$Date,
+                          ymin = data_statistics$Q50,
+                          ymax = data_statistics$Q75,
+                          connectgaps = TRUE,
+                          fillcolor = list(color = colour_p()$colour_hex[7], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[7], opacity = 1, width = 2),
+                          opacity = 0.5,
+                          name = 'Q75 - Q50') %>%
+      plotly::add_ribbons(data = data_statistics,
+                          x = data_statistics$Date,
+                          ymin = data_statistics$Q25,
+                          ymax = data_statistics$Q50,
+                          connectgaps = TRUE,
+                          fillcolor = list(color = colour_p()$colour_hex[6], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[6], opacity = 1, width = 2),
+                          opacity = 0.6,
+                          name = 'Q50 - Q25') %>%
+      plotly::add_ribbons(data = data_statistics,
+                          x = data_statistics$Date,
+                          ymin = data_statistics$Q10,
+                          ymax = data_statistics$Q25,
+                          connectgaps = TRUE,
+                          fillcolor = list(color = colour_p()$colour_hex[3], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[3], opacity = 1, width = 2),
+                          opacity = 0.5,
+                          name = 'Q25 - Q10') %>%
+      plotly::add_ribbons(data = data_statistics,
+                          x = data_statistics$Date,
+                          ymin = data_statistics$min,
+                          ymax = data_statistics$Q10,
+                          connectgaps = TRUE,
+                          fillcolor = list(color = colour_p()$colour_hex[2], opacity = 0.9),
+                          line = list(color = colour_p()$colour_hex[2], opacity = 1, width = 2),
+                          opacity = 0.5,
+                          name = 'Min - Q10') %>%
+      # stats
+      plotly::add_trace(data = subset(data_stats_melt, variable == "min"),
+                        x = ~Date,
+                        y = ~value,
+                        type = 'scatter',
+                        mode = 'lines+markers',
+                        connectgaps = FALSE,
+                        #color = ~variable,
+                        #colors = ~point_colour,
+                        name = "Minimum",
+                        marker = list(color = colour_p()$colour_hex[2],
+                                      size = 10,
+                                      opacity = 0.8),
+                        line = list(color = colour_p()$colour_hex[2],
+                                    width = 2,
+                                    dash = 'dashdot',
+                                    opacity = 0.9)) %>%
+      plotly::add_trace(data = subset(data_stats_melt, variable == "max"),
+                        x = ~Date,
+                        y = ~value,
+                        type = 'scatter',
+                        mode = 'lines+markers',
+                        connectgaps = FALSE,
+                        #color = ~variable,
+                        #colors = ~point_colour,
+                        name = "Maximum",
+                        marker = list(color = colour_p()$colour_hex[9],
+                                      size = 10,
+                                      opacity = 0.8),
+                        line = list(color = colour_p()$colour_hex[9],
+                                    width = 2,
+                                    dash = 'dashdot',
+                                    opacity = 0.9)) %>%
+      plotly::add_trace(data = subset(data_stats_melt, variable == "Q25"),
+                        x = ~Date,
+                        y = ~value,
+                        type = 'scatter',
+                        mode = 'lines+markers',
+                        connectgaps = FALSE,
+                        #color = ~variable,
+                        #colors = ~point_colour,
+                        name = "25th Percentile",
+                        marker = list(color = colour_p()$colour_hex[6],
+                                      size = 10,
+                                      opacity = 0.8),
+                        line = list(color = colour_p()$colour_hex[6],
+                                    width = 2,
+                                    dash = 'dashdot',
+                                    opacity = 0.9)) %>%
+      plotly::add_trace(data = subset(data_stats_melt, variable == "Q75"),
+                        x = ~Date,
+                        y = ~value,
+                        type = 'scatter',
+                        mode = 'lines+markers',
+                        connectgaps = FALSE,
+                        #color = ~variable,
+                        #colors = ~point_colour,
+                        name = "75th Percentile",
+                        marker = list(color = colour_p()$colour_hex[7],
+                                      size = 10,
+                                      opacity = 0.8),
+                        line = list(color = colour_p()$colour_hex[7],
+                                    width = 2,
+                                    dash = 'dashdot',
+                                    opacity = 0.9)) %>%
+      plotly::add_trace(data = subset(data_stats_melt, variable == "Q50"),
+                        x = ~Date, y = ~value,
+                        type = 'scatter',
+                        mode = 'lines+markers',
+                        connectgaps = FALSE,
+                        name = "Median",
+                        marker = list(color = "rgb(130,130,130)",
+                                      size = 10,
+                                      opacity = 0.8),
+                        line = list(color = "rgb(130,130,130)",
+                                    width = 2,
+                                    dash = 'dashdot',
+                                    opacity = 0.9)) %>%
+      # current year data
+      plotly::add_trace(data = data_plot_current,
+                        x = ~date_utc,
+                        y = ~swe_mm,
+                        type = 'scatter',
+                        mode = 'lines+markers',
+                        connectgaps = TRUE,
+                        name = "Current year",
+                        #color = ~variable,
+                        marker = list(color = "black",
+                                      size = 10,
+                                      width = 4),
+                        line = list(color = "black",
+                                    width = 3,
+                                    dash = 'dashdot')) %>%
+      # past year data
+      plotly::add_trace(data = data_plot_historic,
+                        x = ~Date_art,
+                        y = ~swe_mm,
+                        type = 'scatter',
+                        mode = 'lines+markers',
+                        connectgaps = TRUE,
+                        showlegend = TRUE, visible = "legendonly",
+                        color = ~year_plot,
+                        marker = list(size = 10,
+                                      width = 4),
+                        line = list(width = 3,
+                                    dash = 'dashdot')) %>%
+      plotly::layout(title = paste0('Manual SWE (mm) for ', station_name, ", ", station),
+                     margin = list(l=30, r=30, b=80, t=30, pad=0),
+                     xaxis = list(
+                       title = paste0(annotation()),
+                       titlefont = list(size=8),
+                       automargin = TRUE,
+                       type = 'date',
+                       #range = c(min(df.tmp.1$DATE), max(df.tmp.1$DATE)),
+                       tickformat = "%d-%B"),
+                     yaxis = list(title = 'SWE (mm)')) %>%
+      plotly::layout(annotations = list(
+        list(x = 0 , y = 1, text = paste0("Elevation (m): ", elevation, " | Owned by: ",  " | Year established: ", year_est, " | Basin = ", basin), showarrow = F, xref='paper', yref='paper'),
+        list(x = 0 , y = 0.98, text = paste0("Current % of normal (1981-2010): ", percent_normal, " | Current % of median: ", percent_median), showarrow = F, xref='paper', yref='paper'),
+        #list(x = 0 , y = 0.96, text = paste0("% of normal peak: ", percent_normal_peak, " | Typical % of peak accumulation for today: ", typical_percentnorm), showarrow = F, xref='paper', yref='paper'),
+        #list(x = 0 , y = 0.94, text = paste0("Day of peak: ", day_peak[1], " | Days until normal peak: ", days_till_peak), showarrow = F, xref='paper', yref='paper'),
+        list(x = 0 , y = 0.96, text = paste0("Percentile Rank: ", percentile_last, "th | Survey date of percentile: ", date_percentile), showarrow = F, xref='paper', yref='paper'),
+        list(x = 0 , y = 0.94, text = paste0("*Statistics smoothed by 5-day average | Updated: ", Sys.Date()), showarrow = F, xref='paper', yref='paper')))
 
     p <- plotly::partial_bundle(p) # make the size smaller
 
     # Save the plot if you have specified that it should be saved.
     if (save %in% c("True", "true", "T", "TRUE", TRUE)) {
-     htmlwidgets::saveWidget(plotly::as_widget(p),
-                            paste0(path, "manual_plots/", id, ".html"),
-                            selfcontained = F,
-                            libdir = NULL,
-                            title = paste0("SWE ", id, " ", station_name))
+      htmlwidgets::saveWidget(plotly::as_widget(p),
+                              paste0(path, "manual_plots/", station, ".html"),
+                              selfcontained = F,
+                              libdir = NULL,
+                              title = paste0("SWE ", station, " ", station_name))
     }
-    # Save statistics for plotting
   }
-  p
 }
