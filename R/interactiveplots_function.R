@@ -463,6 +463,11 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
       station_name = "Trout Creek West"
     }
 
+    # What was the date of the last available data?
+    d_c <- d_all_curr %>%
+      dplyr::filter(!is.na(value))
+    date_last <- tail(d_c, n = 1)$date_utc
+
     ## Calculate the days to peak snow normal. Partition if there is >50% of the normals present
     # If there is a normal for the station and there is more that 50% of the data present, calculate statistics
     if (sum(!is.na(df$normal_Q50)) / length(df$normal_Q50) > 0.5 && all(!is.null(df$normal_Q50))) {
@@ -474,15 +479,15 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
       day_peak_1 <- norm_q50$date_utc[norm_q50$value == max(norm_q50$value, na.rm = TRUE)]
       day_peak <- day_peak_1[!is.na(day_peak_1)]
 
-      ## Calculate percent of normal
-      percent_normal_mean <- paste0(as.numeric(df$percent_normal_mean[as.Date(df$date_utc) == Sys.Date()]), "%")
+      ## Calculate percent of normal for the last day
+      percent_normal_mean <- paste0(as.numeric(df$percent_normal_mean[as.Date(df$date_utc) == date_last]), "%")
 
       ## Percent of normal peak
-      percent_normal_peak <- round(d_all_curr$value[na.omit(d_all_curr$date_utc == Sys.Date())]/max(norm_q50$value_5, na.rm = TRUE) * 100, digits = 0)
+      percent_normal_peak <- round(d_all_curr$value[na.omit(d_all_curr$date_utc == date_last)]/max(norm_q50$value_5, na.rm = TRUE) * 100, digits = 0)
       percent_normal_peak <- paste0(percent_normal_peak, "%")
 
       # Typical Percent of median peak for this date
-      typical_percentnorm <- round(norm_q50$value_5[na.omit(norm_q50$date_utc == Sys.Date())] / max(norm_q50$value_5, na.rm = TRUE)*100, digits = 0)
+      typical_percentnorm <- round(norm_q50$value_5[na.omit(norm_q50$date_utc == date_last)] / max(norm_q50$value_5, na.rm = TRUE)*100, digits = 0)
       typical_percentnorm <- paste0(typical_percentnorm, "%")
     } else if (all(is.null(df$normal_Q50)) | all(is.na(df$normal_Q50))) {
 
@@ -496,10 +501,10 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
     }
 
     # Percentile rank
-    percentile_today <- df$percentile[df$date_dmy == Sys.Date()]
+    percentile_today <- df$percentile[df$date_dmy == date_last]
 
     # Percent of median
-    percent_median <- as.numeric(df$percent_Q50[df$date_dmy == Sys.Date()])
+    percent_median <- as.numeric(df$percent_Q50[df$date_dmy == date_last])
 
     # Elevation
     el_site <- data.frame(elevation()) %>%
@@ -717,7 +722,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
         list(x = 0 , y = 0.96, text = paste0("% of normal peak: ", percent_normal_peak, " | Typical % of peak accumulation for today: ", typical_percentnorm), showarrow = F, xref='paper', yref='paper'),
         list(x = 0 , y = 0.94, text = paste0("Day of peak: ", day_peak[1], " | Days until normal peak: ", days_till_peak), showarrow = F, xref='paper', yref='paper'),
         list(x = 0 , y = 0.92, text = paste0("Percentile Rank: ", percentile_today, "th"), showarrow = F, xref='paper', yref='paper'),
-        list(x = 0 , y = 0.90, text = paste0("*Statistics smoothed by 5-day average| Updated: ", Sys.Date()), showarrow = F, xref='paper', yref='paper')))
+        list(x = 0 , y = 0.90, text = paste0("*Statistics smoothed by 5-day average| Updated: ", Sys.Date(), " | Stats calculated for: ", lastday_data), showarrow = F, xref='paper', yref='paper')))
 
 
     # Add statistics related to the post peak snow conditions
@@ -799,9 +804,10 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
     # ======================
     # Compile statistics to save in file for the map
     # ======================
-    SWE_today <- d_all_curr$value[d_all_curr$date_utc == as.Date(Sys.Date())][1]
+    SWE_today <- d_all_curr$value[d_all_curr$date_utc == as.Date(date_last)][1]
 
-    if (all(is.na(SWE_today))) { # If there is no current data to save, save an empty dataframe so it still shows up on the map
+    #if (all(is.na(SWE_today))) { # If there is no current data to save, save an empty dataframe so it still shows up on the map
+    if (!(date_last %in% c(Sys.Date(), Sys.Date() - 1, Sys.Date() - 2))) {
       print("No current stats to save")
 
       empty_df <- data.frame("id" = NA, "station_name" = NA, "el_site" = NA,
@@ -809,7 +815,8 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                              "SWE_today" = "No Data",
                              "percent_median" = NA,
                              "percentile_today" = NA,
-                             "percent_normal" = NA, "days_till_peak" = days_till_peak, "day_peak" = day_peak[1])
+                             "percent_normal" = NA, "days_till_peak" = days_till_peak, "day_peak" = day_peak[1],
+                             "date_stats" = date_last)
       empty_df$id <- stn_id
       empty_df$station_name <- ifelse(length(station_name) > 0, station_name, NA)
       empty_df$el_site <- el_site
@@ -826,7 +833,8 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
                                 "el_site" = el_site, "owned_by" = owned_by, "year_est" = year_est, "basin" = basin,
                                 "SWE_today" = SWE_today, "percent_median" = percent_median,
                                 "percentile_today" = percentile_today, "percent_normal_mean" = percent_normal_mean,
-                                "days_till_peak" = as.numeric(days_till_peak), "day_peak" = day_peak[1])
+                                "days_till_peak" = as.numeric(days_till_peak), "day_peak" = day_peak[1],
+                                "date_stats" = date_last)
 
       row.names(stats_out_i) <- c()
 
