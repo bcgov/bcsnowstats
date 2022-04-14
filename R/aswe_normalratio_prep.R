@@ -57,6 +57,7 @@ aswe_normalratio <- function(data_soi, stations_adj, data_id, normal_max, normal
    # Unfold the estimated data from the adjacent stations
    estimated_unmelted <- ratio_all_unfold %>%
      dplyr::filter(!is.na(estimated_swe)) %>%
+     unique() %>%
      tidyr::spread(id, estimated_swe)
 
    if ("NA" %in% colnames(estimated_unmelted)) {
