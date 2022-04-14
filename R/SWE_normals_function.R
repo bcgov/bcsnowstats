@@ -38,11 +38,15 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
         parameter = "swe",
         timestep = "daily") %>%
       dplyr::rename("values_stats" = value)
+
+    id <- data
   } else if (all(data %in% manual)) {
     data_norm <- bcsnowdata::get_manual_swe(
         station_id = data,
         get_year = "All",
         survey_period = "All")
+
+    id <- data
   } else {
     data_norm <- data
 
@@ -50,9 +54,9 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
       data_norm <- data_norm %>%
         dplyr::rename("values_stats" = value)
     }
-  }
 
-  id <- unique(data_norm$id)
+    id <- unique(data_norm$id)
+  }
 
   if (dim(data_norm)[1] == 0) {
       df_normals_out <- data.frame(station_id = character())
@@ -66,7 +70,7 @@ SWE_normals <- function(data, normal_max, normal_min, force = FALSE, ...) {
         dplyr::filter(id %in% aswe)
 
       # Use the aswe_normal() function to fill in data (if appropriate) and calculate normals (if there is sufficient data)
-      df_normals_aswe <- aswe_normal(data = data_swe, normal_max, normal_min, data_id = "values_stats", force = force)
+      df_normals_aswe <- aswe_normal(df = data_swe, normal_max, normal_min, data_id = "values_stats", force = force)
 
   # If the site is manual site
   } else if (any(id %in% manual)) {
