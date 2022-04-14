@@ -33,8 +33,7 @@ aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_m
   if ("id" %in% colnames(data_all)) {
 
     # Get data for the station in order to calculate statistics
-    df_tmp_raw <- data_all #%>%
-      #dplyr::filter(id %in% stations)
+    df_tmp_raw <- data_all
 
     # ===========
     # Preprocessing
