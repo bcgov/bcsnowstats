@@ -5,9 +5,11 @@
 \title{Internal function for calculating normals for ASWE sites. Includes data filling for stations with 10-20 years of data.
 January 2021, Ashlee Jollymore}
 \usage{
-aswe_normal(data, normal_max, normal_min, data_id, ask = FALSE, force = FALSE)
+aswe_normal(df, normal_max, normal_min, data_id, ask = FALSE, force = FALSE)
 }
 \arguments{
+\item{df}{data input}
+
 \item{normal_max}{date of the max normal year}
 
 \item{normal_min}{date for the min normal year}
@@ -15,8 +17,6 @@ aswe_normal(data, normal_max, normal_min, data_id, ask = FALSE, force = FALSE)
 \item{ask}{asks user whether they want to save data. Defaults to FALSE}
 
 \item{force}{asks user whether they want to manually overwrite the current cache. Defaults to FALSE (no)}
-
-\item{stations}{station that you are calculating statistics for}
 
 \item{survey_period}{survey period in \%m-\%d format}
 
