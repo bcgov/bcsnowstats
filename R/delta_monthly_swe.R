@@ -28,7 +28,7 @@ SWE_diff_month <- function(month_select, data){
     dplyr::filter(day %in% c("1", "01", "28", "29", "30", "31")) %>%
     dplyr::arrange(Date)
 
-  if (dim(select_month)[1] > 0) {
+  if (dim(select_month)[1] > 0 & max(select_month$day, na.rm = TRUE) %in% c("28", "29", "30", "31")) {
 
    # Figure out the difference in SWE between the first and last day of the mont
    if (max(select_month$day, na.rm = TRUE) == "31") {
