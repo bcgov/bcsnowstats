@@ -13,7 +13,7 @@
 
 #' Internal function for calculating normals for ASWE sites. Includes data filling for stations with 10-20 years of data.
 #' January 2021, Ashlee Jollymore
-#' @param stations station that you are calculating statistics for
+#' @param df data input
 #' @param survey_period survey period in %m-%d format
 #' @param get_year water year that you are calculating statistics for
 #' @param normal_min date for the min normal year
@@ -24,12 +24,12 @@
 #' @keywords internal
 #' @examples \dontrun{}
 
-aswe_normal <- function(data, normal_max, normal_min, data_id, ask = FALSE, force = FALSE) {
+aswe_normal <- function(df, normal_max, normal_min, data_id, ask = FALSE, force = FALSE) {
 
   # Check cached data to see if the normals have already been calculated for the day of interest
 
   # Check to ensure that the ASWE archived data has been cached on the user's computer and is up to date
-  fname <- paste0(unique(data$parameter), "_norm_archive.rds")
+  fname <- paste0(unique(df$parameter), "_norm_archive.rds")
   dir <- data_dir()
   fpath <- file.path(dir, fname)
 
@@ -40,7 +40,7 @@ aswe_normal <- function(data, normal_max, normal_min, data_id, ask = FALSE, forc
     check_write_to_data_dir(dir, ask)
 
     # Calculate the normal data for all days of the year
-    df_normals_out  <- int_aswenorm(data, normal_max, normal_min, data_id)
+    df_normals_out  <- int_aswenorm(df, normal_max, normal_min, data_id)
 
     # Save archive - all data before current year
     saveRDS(df_normals_out, fpath)
@@ -53,13 +53,13 @@ aswe_normal <- function(data, normal_max, normal_min, data_id, ask = FALSE, forc
     # Check to ensure that the data contains statistics with the right normal range. Filter for the range you are looking for
     check <- df_normals_initial %>%
       dplyr::filter(initial_normal_range == paste0(normal_min, " to ", normal_max)) %>%
-      dplyr::filter(id %in% unique(data$id))
+      dplyr::filter(id %in% unique(df$id))
 
     # If the archive doesn't have the normal range you want, get the data for your normal range and save it
-    if (dim(check)[1] < 1 | !(all(unique(check$id) %in% unique(data$id)))) {
+    if (dim(check)[1] < 1 | !(all(unique(check$id) %in% unique(df$id)))) {
 
       # get normals for the year range you want
-      df_normals_out  <- int_aswenorm(data, normal_max, normal_min, data_id)
+      df_normals_out  <- int_aswenorm(df, normal_max, normal_min, data_id)
 
       if (!is.null(df_normals_out)) {
         # Append to the data for the other normal range calculated and save
