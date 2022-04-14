@@ -806,6 +806,10 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
     # ======================
     SWE_today <- d_all_curr$value[d_all_curr$date_utc == as.Date(date_last)][1]
 
+    if (length(date_last) == 0) {
+      date_last = NA
+    }
+
     #if (all(is.na(SWE_today))) { # If there is no current data to save, save an empty dataframe so it still shows up on the map
     if (!(date_last %in% c(Sys.Date(), Sys.Date() - 1, Sys.Date() - 2))) {
       print("No current stats to save")
