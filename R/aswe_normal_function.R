@@ -40,7 +40,7 @@ aswe_normal <- function(df, normal_max, normal_min, data_id, ask = FALSE, force 
     check_write_to_data_dir(dir, ask)
 
     # Calculate the normal data for all days of the year
-    df_normals_out  <- int_aswenorm(df, normal_max, normal_min, data_id)
+    df_normals_out  <- int_aswenorm(data = df, normal_max, normal_min, data_id)
 
     # Save archive - all data before current year
     saveRDS(df_normals_out, fpath)
