@@ -59,7 +59,7 @@ aswe_normal <- function(df, normal_max, normal_min, data_id, ask = FALSE, force 
     if (dim(check)[1] < 1 | !(all(unique(check$id) %in% unique(df$id)))) {
 
       # get normals for the year range you want
-      df_normals_out  <- int_aswenorm(df, normal_max, normal_min, data_id)
+      df_normals_out  <- int_aswenorm(data = df, normal_max, normal_min, data_id)
 
       if (!is.null(df_normals_out)) {
         # Append to the data for the other normal range calculated and save
@@ -131,7 +131,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
     dplyr::full_join(ny_80) %>%
     dplyr::mutate(numberofyears_80_raw = ifelse(is.na(numberofyears_80_raw), 0, numberofyears_80_raw))
 
-  normals <- lapply(unique(data$id),
+  normals <- lapply(unique(data_m$id),
     calc_norm,
     df_nt,
     df_normal_80, normal_max = normal_max, normal_min = normal_min)
@@ -248,7 +248,7 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
 
     # If there is less than 10 years of data available even after trying adjacent sites, return
   } else {
-    df_normals_out <- data.frame("id"  = unique(data$id),
+    df_normals_out <- data.frame("id"  = unique(df_nt$id),
                                "m_d" = NA,
                                "normal_minimum" = NA,
                                "normal_swe_mean" = NA,
