@@ -248,7 +248,7 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
 
     # If there is less than 10 years of data available even after trying adjacent sites, return
   } else {
-    df_normals_out <- data.frame("id"  = unique(df_nt$id),
+    df_normals_out <- data.frame("id"  = station,
                                "m_d" = NA,
                                "normal_minimum" = NA,
                                "normal_swe_mean" = NA,
