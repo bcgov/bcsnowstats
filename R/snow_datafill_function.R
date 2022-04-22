@@ -72,7 +72,7 @@ snow_datafill <- function(data_soi, data_id, normal_max, normal_min, ...) {
     # use function to return data estimated from normal ratio method using stations within 100 km of the station of interest
     all_swe <- aswe_normalratio(data_soi, stations_adj, data_id, normal_max, normal_min)
 
-  } else {
+   } else {
     # If there are no stations within a 100 km radius and 20-10 years of data, then do not calculate a normal.
     all_swe <- data_soi %>%
       dplyr::arrange(date_utc) %>%
