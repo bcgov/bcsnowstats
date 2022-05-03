@@ -80,7 +80,7 @@ stats_aswe <- function(station_id, parameter_id = "SWE", survey_period = "All", 
                        data_all = df,
                        survey_period = survey_period,
                        get_year = get_year,
-                       normal_min, normal_max, force)
+                       normal_min = normal_min, normal_max = normal_max, force = force)
 
   # create an empty row for stations that did not return any data for the period specified
   if (!isTRUE(all.equal(station_list, unique(df_final_1$id))) | !is.data.frame(df_final_1)) {
