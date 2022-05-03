@@ -77,7 +77,7 @@ aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_m
     # ===========
     if (dim(df_stat)[1] > 1) {
 
-      df_tmp_2 <- dplyr::full_join(df_stat_fill, df_stat, by = c("id", "m_d"))
+      df_tmp_2 <- dplyr::full_join(df_stat_fill, df_stat)
 
       #Select the user defined time interval
       if (survey_period == "latest") {
@@ -160,8 +160,7 @@ aswe_get_stats <- function(data_all, stations, survey_period, get_year, normal_m
 
     # If there is no data within the dataframe
     if (dim(latest_stats_2)[1] < 1) {
-      entry <- t(data.frame(c(as.character(stations), survey_period)))
-      colnames(entry) <- c("id", "m_d")
+      entry <- data.frame(id = as.character(stations), m_d = survey_period)
       latest_stats_3 <- dplyr::bind_rows(latest_stats_2, as.data.frame(entry))
     } else {
       latest_stats_3 <- latest_stats_2
