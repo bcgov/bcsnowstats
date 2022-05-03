@@ -47,15 +47,12 @@ get_snow_stats <- function(station_id = c("all", "aswe", "manual"), survey_perio
   }
 
   if (length(id_aswe) > 0) {
-  #if (any(station_id %in% c("aswe", "ASWE", "Aswe")) || any(station_id %in% c("ALL", "all", "All")) || any(station_id %in% bcsnowdata::snow_auto_location()$LOCATION_ID)) {
-    #tims_start <- Sys.time()
     df_aswe <- stats_aswe(station_id = id_aswe,
                survey_period = survey_period,
                get_year = get_year,
                normal_min = normal_min,
                normal_max = normal_max,
                force = force)
-    #time_1 <- tims_start - Sys.time()
   }
   # Manual data
   if (length(id_manual) > 0) {
