@@ -85,7 +85,7 @@ stats_MSWE <- function(station_id, survey_period,
                       data = manual_snow,
                       survey_period = survey_period,
                       get_year = get_year,
-                      normal_min, normal_max, force)
+                      normal_min = normal_min, normal_max = normal_max, force = force)
 
   # create an empty row for stations that did not return any data for the period specified
   if (!isTRUE(all.equal(stations, unique(df_final_1$id))) | !is.data.frame(df_final_1)) {
