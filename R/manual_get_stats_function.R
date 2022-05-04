@@ -113,8 +113,7 @@ manual_get_stats <- function(data, stations, survey_period, get_year, normal_min
   }
 
   if (dim(latest_stats_2)[1] < 1) {
-    entry <- t(data.frame(c(as.character(stations), survey_period)))
-    colnames(entry) <- c("id", "survey_period")
+    entry <- data.frame(id = as.character(stations), "survey_period" = survey_period)
 
     latest_stats_3 <- dplyr::bind_rows(latest_stats_2, as.data.frame(entry))
   } else {
