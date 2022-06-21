@@ -170,8 +170,8 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
     data_0t10 <- df_normal_time # Make a new variable to preserve the initial data - years with at least 80% of the data in the snow accumulation period.
 
     # ++++++++++++++++++++++++++++++++++++++++++++++
-    # Use function to check to see if there is manual site to extend data.
-    # For now, do not calculate a normal
+    # Use function to calculate the normal if the station was converted from manual to aswe
+
 
     # Filter out the years that have less that 80% of the data within the snow accumulation season; Add in correct columms
     all_swe <- data_0t10 %>%
