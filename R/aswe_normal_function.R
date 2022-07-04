@@ -171,7 +171,7 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
 
     # ++++++++++++++++++++++++++++++++++++++++++++++
     # Use function to calculate the normal if the station was converted from manual to aswe
-
+    #df_normals_out <- manual_2aswe(id = station, normal_max, normal_min)
 
     # Filter out the years that have less that 80% of the data within the snow accumulation season; Add in correct columms
     all_swe <- data_0t10 %>%
