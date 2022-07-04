@@ -35,7 +35,8 @@ manual_2aswe <- function(id, normal_max, normal_min) {
                                               timestep = "daily") %>%
       dplyr::mutate(Date = as.Date(date_utc)) %>%
       dplyr::rename(swe_mm = value) %>%
-      dplyr::mutate(station_type = "aswe")
+      dplyr::mutate(station_type = "aswe") %>%
+      dplyr::arrange(Date)
 
     # get the first and last year of data
     aswe_d_min <- lubridate::year(min(aswe_daily$Date))
