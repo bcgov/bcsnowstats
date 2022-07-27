@@ -169,7 +169,8 @@ manual_2aswe <- function(id, normal_max, normal_min) {
       dplyr::rename(date_max_normal_utc = Date)
 
     dates <- dplyr::full_join(min_date, max_date)
-    df_normals_out <- dplyr::full_join(df_normals, dates)
+    df_normals_out <- dplyr::full_join(df_normals, dates) %>%
+      dplyr::mutate(data_flag = "<10 years data; filled from manual data")
 
   } else {
     df_normals_out <- NA
