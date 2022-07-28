@@ -125,18 +125,21 @@ manual_2aswe <- function(id, normal_max, normal_min) {
     # Check to see if data filling created at record of at least 10 years.
     years_filled <- missing_aswe_s %>%
       dplyr::group_by(survey_period) %>%
-      dplyr::summarize(number_years = length(swe_out))
-
-    # Calculate a normal for the survey period with at least 10 years of data
-    years_filled_10 <- years_filled %>%
+      dplyr::summarize(number_years = length(swe_out)) %>%
       dplyr::full_join(missing_aswe_s) %>%
-      #filter for the number of years > 10
-      dplyr::filter(number_years >= 10) %>%
       # filter by the normal range
       dplyr::mutate(wr = bcsnowdata::wtr_yr(Date)) %>%
       dplyr::filter(wr <= normal_max, wr >= normal_min) %>% # Filter by the normal dates that you specify
       dplyr::group_by(survey_period) %>%
       dplyr::filter(!is.na(swe_out))
+
+    # Calculate a normal for the survey period with at least 10 years of data
+    years_filled_10 <- years_filled %>%
+      dplyr::group_by(survey_period) %>%
+      dplyr::summarize(number_years = length(swe_out)) %>%
+      dplyr::full_join(years_filled) %>%
+      dplyr::filter(number_years >= 10) %>%
+      dplyr::group_by(survey_period)
 
     # Calculate the normal statistics for each day of the year
     df_normals <- do.call(data.frame,
@@ -151,9 +154,9 @@ manual_2aswe <- function(id, normal_max, normal_min) {
                                dplyr::summarise(years_filled_10, normal_maximum = max(swe_out, na.rm = TRUE), .groups = "keep"))) %>%
       dplyr::select(-survey_period.1, -survey_period.2, -survey_period.3, -survey_period.4, -survey_period.5, -survey_period.6, -survey_period.7, -survey_period.8) %>%
       #dplyr::mutate(Data_Range_normal = (paste0(round(normal_minimum, digits = 0), ' to ', round(normal_maximum, digits = 0)))) %>%
-      dplyr::mutate(data_range_normal = (paste0(min(lubridate::year(years_filled_10$Date), na.rm = TRUE), " to ", max(lubridate::year(years_filled_10$Date), na.rm = TRUE)))) #%>%
-      #dplyr::mutate(normal_datarange_estimated = unique(all_swe$numberofyears_estimated_80, na.rm = TRUE)[!is.na(unique(all_swe$numberofyears_estimated_80, na.rm = TRUE))]) %>%
-      #dplyr::mutate(normal_datarange_raw = unique(all_swe$numberofyears_80_raw, na.rm = TRUE)[!is.na(unique(all_swe$numberofyears_80_raw, na.rm = TRUE))])
+      dplyr::mutate(data_range_normal = (paste0(normal_min, " to ", normal_max))) %>%
+      dplyr::mutate(normal_datarange_estimated = paste0(min(lubridate::year(years_filled_10$Date), na.rm = TRUE), " to ", max(lubridate::year(years_filled_10$Date), na.rm = TRUE))) %>%
+      dplyr::mutate(normal_datarange_raw = paste0(aswe_d_min, " to ", aswe_d_max))
 
     # get the day of the max and min!! Use only 'real', non estimated data
     min_date <- years_filled_10 %>%
