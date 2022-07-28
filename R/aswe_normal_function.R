@@ -171,17 +171,16 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
         dplyr::mutate(survey_period = format(date_utc, format = "%d-%b"))
     # ++++++++++++++++++++++++++++++++++++++++++++++
     # Use function to calculate the normal if the station was converted from manual to aswe
-    df_normals_out <- manual_2aswe(id = station, normal_max, normal_min)
+    df_normals <- manual_2aswe(id = station, normal_max, normal_min)
 
     # Filter out the years that have less that 80% of the data within the snow accumulation season; Add in correct columms
     if (dim(df_normals_out)[1] > 1) {
-      all_swe <- df_normals_out %>%
+      df_normals_out <- df_normals_out %>%
         dplyr::full_join(data_0t10)
-        dplyr::filter(wr %in% unique(data_0t10$wr)) %>%
-        dplyr::mutate(numberofyears_estimated_80 = numberofyears_80_raw) %>%
-        dplyr::mutate(swe_fornormal = values_stats)
+        #dplyr::filter(wr %in% unique(data_0t10$wr)) #%>%
+        #dplyr::mutate(swe_fornormal = values_stats)
     } else {
-      all_swe <- data_0t10 %>%
+      df_normals_out <- data_0t10 %>%
         dplyr::filter(wr %in% dfn_80$wr) %>%
         dplyr::mutate(numberofyears_estimated_80 = numberofyears_80_raw) %>%
         dplyr::mutate(swe_fornormal = values_stats)
