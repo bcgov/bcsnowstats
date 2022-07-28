@@ -125,7 +125,6 @@ manual_2aswe <- function(id, normal_max, normal_min) {
     # Check to see if data filling created at record of at least 10 years.
     years_filled <- missing_aswe_s %>%
       dplyr::group_by(survey_period) %>%
-      dplyr::summarize(number_years = length(swe_out)) %>%
       dplyr::full_join(missing_aswe_s) %>%
       # filter by the normal range
       dplyr::mutate(wr = bcsnowdata::wtr_yr(Date)) %>%
@@ -156,7 +155,9 @@ manual_2aswe <- function(id, normal_max, normal_min) {
       #dplyr::mutate(Data_Range_normal = (paste0(round(normal_minimum, digits = 0), ' to ', round(normal_maximum, digits = 0)))) %>%
       dplyr::mutate(data_range_normal = (paste0(normal_min, " to ", normal_max))) %>%
       dplyr::mutate(normal_datarange_estimated = paste0(min(lubridate::year(years_filled_10$Date), na.rm = TRUE), " to ", max(lubridate::year(years_filled_10$Date), na.rm = TRUE))) %>%
-      dplyr::mutate(normal_datarange_raw = paste0(aswe_d_min, " to ", aswe_d_max))
+      dplyr::mutate(normal_datarange_raw = paste0(aswe_d_min, " to ", aswe_d_max)) %>%
+      dplyr::full_join(years_filled_10 %>% dplyr::select(survey_period, number_years)) %>%
+      dplyr::rename(numberofyears_estimated_80 = number_years)
 
     # get the day of the max and min!! Use only 'real', non estimated data
     min_date <- years_filled_10 %>%
