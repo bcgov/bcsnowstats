@@ -115,7 +115,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
     dplyr::filter(!is.na(values_stats)) %>% # # filter out missing data
     dplyr::ungroup() %>%
     dplyr::group_by(id, wr) %>%
-    dplyr::filter(lubridate::month(as.Date(m_d, format = "%m-%d")) <= 6 || lubridate::month(as.Date(m_d, format = "%m-%d")) >= 10) %>% # get only the snow accumulation and melt season
+    dplyr::filter(lubridate::month(as.Date(m_d, format = "%m-%d")) <= 6 | lubridate::month(as.Date(m_d, format = "%m-%d")) >= 10) %>% # get only the snow accumulation and melt season
     dplyr::mutate(percent_available = length(values_stats) / length(seq(as.Date("2020-10-01"), as.Date("2021-06-30"), by = "day")) * 100) %>%
     dplyr::select(id, wr, percent_available) %>%
     unique() %>%
@@ -131,30 +131,41 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
     dplyr::full_join(ny_80) %>%
     dplyr::mutate(numberofyears_80_raw = ifelse(is.na(numberofyears_80_raw), 0, numberofyears_80_raw))
 
-  normals <- lapply(unique(data_m$id),
+  df_normals <- lapply(unique(data$id),
     calc_norm,
-    df_nt,
-    df_normal_80, normal_max = normal_max, normal_min = normal_min)
+    df_nt = df_nt,
+    df_normal_80 = df_normal_80, normal_max = normal_max, normal_min = normal_min)
 
-  df_normals_out <- do.call(rbind, normals)
+  df_normals_final <- do.call(plyr::rbind.fill, df_normals) %>%
+    unique()
 
-  return(df_normals_out)
+  return(df_normals_final)
 }
 
-# Function for defining whether to fill in data and calculate normals. To be run station by station
-calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
+#' Function for defining whether to fill in data and calculate normals. To be run station by station
+#' July 2022, Ashlee Jollymore
+#' @param station station that you are calculating statistics for
+#' @param df_nt data
+#' @param df_normal_80 data that reaches the 80% completeness threshold
+#' @param normal_min date for the min normal year
+#' @param normal_max date of the max normal year
+#' @export
+#' @keywords internal
+#' @examples \dontrun{}
+#
+calc_norm <- function(stn_id, df_nt, df_normal_80, normal_max, normal_min) {
 
   numberofyears_80 <- df_nt %>%
     ungroup() %>%
-    dplyr::filter(id %in% station) %>%
+    dplyr::filter(id %in% stn_id) %>%
     dplyr::select(numberofyears_80_raw) %>%
     unique()
 
   df_normal_time <- df_nt %>%
-    dplyr::filter(id %in% station)
+    dplyr::filter(id %in% stn_id)
 
   dfn_80 <- df_normal_80 %>%
-    dplyr::filter(id %in% station)
+    dplyr::filter(id %in% stn_id)
 
   if (dim(numberofyears_80)[1] == 0) {
     numberofyears_80_raw <- 0
@@ -170,22 +181,37 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
     data_0t10 <- df_normal_time %>% # Make a new variable to preserve the initial data - years with at least 80% of the data in the snow accumulation period.
         dplyr::mutate(survey_period = format(date_utc, format = "%d-%b"))
     # ++++++++++++++++++++++++++++++++++++++++++++++
-    # Use function to calculate the normal if the station was converted from manual to aswe
-    df_normals <- manual_2aswe(id = station, normal_max, normal_min)
+    # Use function to calculate the normal if the stn_id was converted from manual to aswe
+    df_normals <- manual_2aswe(id = stn_id, normal_max, normal_min)
 
     # Filter out the years that have less that 80% of the data within the snow accumulation season; Add in correct columms
-    if (dim(df_normals_out)[1] > 1) {
-      df_normals_out <- df_normals_out %>%
-        dplyr::full_join(data_0t10)
-        #dplyr::filter(wr %in% unique(data_0t10$wr)) #%>%
-        #dplyr::mutate(swe_fornormal = values_stats)
-    } else {
-      df_normals_out <- data_0t10 %>%
-        dplyr::filter(wr %in% dfn_80$wr) %>%
-        dplyr::mutate(numberofyears_estimated_80 = numberofyears_80_raw) %>%
-        dplyr::mutate(swe_fornormal = values_stats)
-    }
+    if (is.null(dim(df_normals)[1])) {
 
+      df_normals_out <- data.frame("id"  = stn_id,
+                                   "m_d" = NA,
+                                   "normal_minimum" = NA,
+                                   "normal_swe_mean" = NA,
+                                   "normal_Q5" = NA,
+                                   "normal_Q10" = NA,
+                                   "normal_Q25"  = NA,
+                                   "normal_Q50" = NA,
+                                   "normal_Q75" = NA,
+                                   "normal_Q90" = NA,
+                                   "normal_maximum" = NA,
+                                   "data_range_normal" = NA,
+                                   "initial_normal_range" = paste0(normal_min, " to ", normal_max),
+                                   "normal_datarange_estimated" = NA,
+                                   "normal_datarange_raw" = NA,
+                                   "date_min_normal_utc" = NA,
+                                   "date_max_normal_utc"  = NA,
+                                   "data_flag" = "insufficient data")
+
+    } else {
+
+      df_normals_out <- df_normals
+
+    }
+    all_swe <- NULL
   }
 
   # Does the station have between 10-20 years of data? If so, extend the dataset using 1) manual dataset (if converted), and 2) adjacent stations
@@ -194,7 +220,8 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
     data_20t10 <- df_normal_time # Make a new variable to preserve the initial data - years with at least 80% of the data in the snow accumulation period.
 
     # Fill in missing data with an estimated dataset from either manual dataset (if converted) and/or adjacent stations
-    all_swe <- snow_datafill(data_soi = data_20t10, data_id, normal_max, normal_min)
+    all_swe <- snow_datafill(data_soi = data_20t10, data_id, normal_max, normal_min) %>%
+      dplyr::mutate(data_flag = "10-20 years of data; data filled from adjacent sites")
   }
 
   # Does the site have between 20-30 years of data? Don't add in any additional data and jsut calculcate normals from
@@ -204,8 +231,10 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
     all_swe <- df_normal_time %>%
      #dplyr::filter(wr %in% df_normal_80$wr) %>%
       dplyr::mutate(numberofyears_estimated_80 = numberofyears_80$numberofyears_80_raw) %>%
-      dplyr::mutate(swe_fornormal = values_stats)
+      dplyr::mutate(swe_fornormal = values_stats)%>%
+      dplyr::mutate(data_flag = ">20 years of data; no data filling")
   }
+
   # End of data filling according to thresholds
 
   # ==============================
@@ -255,8 +284,10 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
     # Smooth all the statistics by the 5 -day average?
 
     # If there is less than 10 years of data available even after trying adjacent sites, return
+  } else if (numberofyears_80_raw < 10) {
+    df_normals_out <- df_normals_out
   } else {
-    df_normals_out <- data.frame("id"  = station,
+    df_normals_out <- data.frame("id"  = stn_id,
                                "m_d" = NA,
                                "normal_minimum" = NA,
                                "normal_swe_mean" = NA,
@@ -272,8 +303,9 @@ calc_norm <- function(station, df_nt, df_normal_80, normal_max, normal_min) {
                                "normal_datarange_estimated" = NA,
                                "normal_datarange_raw" = NA,
                                "date_min_normal_utc" = NA,
-                               "date_max_normal_utc"  = NA)
+                               "date_max_normal_utc"  = NA,
+                               "data_flag" = NA)
 
   }
-  df_normals_out
+  return(df_normals_out)
 }
