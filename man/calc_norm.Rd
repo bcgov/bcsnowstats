@@ -5,11 +5,9 @@
 \title{Function for defining whether to fill in data and calculate normals. To be run station by station
 July 2022, Ashlee Jollymore}
 \usage{
-calc_norm(station, df_nt, df_normal_80, normal_max, normal_min)
+calc_norm(stn_id, df_nt, df_normal_80, normal_max, normal_min)
 }
 \arguments{
-\item{station}{station that you are calculating statistics for}
-
 \item{df_nt}{data}
 
 \item{df_normal_80}{data that reaches the 80\% completeness threshold}
@@ -17,6 +15,8 @@ calc_norm(station, df_nt, df_normal_80, normal_max, normal_min)
 \item{normal_max}{date of the max normal year}
 
 \item{normal_min}{date for the min normal year}
+
+\item{station}{station that you are calculating statistics for}
 }
 \description{
 Function for defining whether to fill in data and calculate normals. To be run station by station
