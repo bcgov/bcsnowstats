@@ -132,7 +132,8 @@ manual_2aswe <- function(id, normal_max, normal_min) {
         dplyr::summarize(number_years = length(swe_out)) %>%
         dplyr::full_join(years_filled) %>%
         dplyr::filter(number_years >= 10) %>%
-        dplyr::group_by(survey_period)
+        dplyr::group_by(survey_period) %>%
+        dplyr::mutate(data_range_normal = paste0((min(lubridate::year(years_filled_10$Date), na.rm = TRUE)), " to ", (max(lubridate::year(years_filled_10$Date), na.rm = TRUE))))
 
       # Calculate the normal statistics for each day of the year
       df_normals <- do.call(data.frame,
@@ -147,13 +148,14 @@ manual_2aswe <- function(id, normal_max, normal_min) {
                                  dplyr::summarise(years_filled_10, normal_maximum = max(swe_out, na.rm = TRUE), .groups = "keep"))) %>%
         dplyr::select(-survey_period.1, -survey_period.2, -survey_period.3, -survey_period.4, -survey_period.5, -survey_period.6, -survey_period.7, -survey_period.8) %>%
         #dplyr::mutate(Data_Range_normal = (paste0(round(normal_minimum, digits = 0), ' to ', round(normal_maximum, digits = 0)))) %>%
-        dplyr::mutate(data_range_normal = (paste0(normal_min, " to ", normal_max))) %>%
-        dplyr::mutate(normal_datarange_estimated = paste0(min(lubridate::year(years_filled_10$Date), na.rm = TRUE), " to ", max(lubridate::year(years_filled_10$Date), na.rm = TRUE))) %>%
-        dplyr::mutate(normal_datarange_raw = paste0(aswe_d_min, " to ", aswe_d_max)) %>%
-        dplyr::full_join(years_filled_10 %>% dplyr::select(survey_period, number_years)) %>%
-        dplyr::rename(numberofyears_estimated_80 = number_years) %>%
+        dplyr::mutate(initial_normal_range = (paste0(normal_min, " to ", normal_max))) %>%
+        dplyr::mutate(normal_datarange_raw = aswe_d_max - aswe_d_min) %>%
+        dplyr::full_join(years_filled_10 %>% dplyr::select(survey_period, number_years, data_range_normal)) %>%
+        dplyr::rename(normal_datarange_estimated = number_years) %>%
         dplyr::mutate(id = id) %>%
-        unique()
+        unique() %>%
+        dplyr::mutate(data_flag = "<10 years data; filled from manual data") %>%
+        dplyr::mutate(m_d = format(strptime(format(paste0(survey_period, "-2022"), format = "%d-%b-%Y"), format = "%d-%b-%Y"), format = "%m-%d"))
 
       # get the day of the max and min!! Use only 'real', non estimated data
       min_date <- years_filled_10 %>%
@@ -169,9 +171,7 @@ manual_2aswe <- function(id, normal_max, normal_min) {
         dplyr::rename(date_max_normal_utc = Date)
 
       dates <- dplyr::full_join(min_date, max_date)
-      df_normals_out <- dplyr::full_join(df_normals, dates) %>%
-        dplyr::mutate(data_flag = "<10 years data; filled from manual data") %>%
-        dplyr::mutate(m_d = format(survey_period, format = "%m-%d"))
+      df_normals_out <- dplyr::full_join(df_normals, dates)
     } else {
       df_normals_out <- NA
     }
