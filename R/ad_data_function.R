@@ -30,7 +30,7 @@ ad_data <- function(station, normal_max, normal_min, data_id) {
   )
 
   # If there is no data, assign the data
-  if (dim(ad_st)[1] == 0) {
+  if (dim(ad_st)[1] == 0 | !is.numeric(ad_st$value)) {
 
    # Empty dataframe
    ad_data_m <- NA
