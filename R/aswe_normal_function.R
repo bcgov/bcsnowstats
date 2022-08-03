@@ -178,8 +178,6 @@ calc_norm <- function(stn_id, df_nt, df_normal_80, normal_max, normal_min) {
   # Is there less than 10 years of data?
   if (numberofyears_80_raw < 10) {
 
-    data_0t10 <- df_normal_time %>% # Make a new variable to preserve the initial data - years with at least 80% of the data in the snow accumulation period.
-        dplyr::mutate(survey_period = format(date_utc, format = "%d-%b"))
     # ++++++++++++++++++++++++++++++++++++++++++++++
     # Use function to calculate the normal if the stn_id was converted from manual to aswe
     df_normals <- manual_2aswe(id = stn_id, normal_max, normal_min)
