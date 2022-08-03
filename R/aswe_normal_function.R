@@ -279,7 +279,8 @@ calc_norm <- function(stn_id, df_nt, df_normal_80, normal_max, normal_min) {
     # append to data
     dates <- dplyr::full_join(min_date, max_date, by = c("id", "m_d"))
     df_normals_out <- dplyr::full_join(df_normals, dates, by = c("id", "m_d")) %>%
-      dplyr::mutate(initial_normal_range = paste0(normal_min, " to ", normal_max))
+      dplyr::mutate(initial_normal_range = paste0(normal_min, " to ", normal_max)) %>%
+      dplyr::mutate(data_flag = unique(all_swe$data_flag))
 
     # Smooth all the statistics by the 5 -day average?
 
@@ -304,7 +305,7 @@ calc_norm <- function(stn_id, df_nt, df_normal_80, normal_max, normal_min) {
                                "normal_datarange_raw" = NA,
                                "date_min_normal_utc" = NA,
                                "date_max_normal_utc"  = NA,
-                               "data_flag" = NA)
+                               "data_flag" = "Insufficient data")
 
   }
   return(df_normals_out)
