@@ -27,17 +27,6 @@
 
 snow_datafill <- function(data_soi, data_id, normal_max, normal_min, ...) {
 
-  #It is a ASWE site? If so, fill first with manual station if converted, then data from adjacent sites
-  if (unique(data_soi$id) %in% bcsnowdata::snow_auto_location()$LOCATION_ID) {
-
-   # Was the site converted from a manual site to a ASWE site? Get the name without the P (P shows that the site is ASWE)
-   station_id_manual <- substring(unique(data_soi$id), 1, 4)
-
-   # COMMENTED OUT FOR NOW - not functional. Skip right to filling with nearest neighbours
-   #if (station_id_manual %in% bcsnowdata::snow_manual_location()$LOCATION_ID) {
-     # backextend data using manual site if converted. Use function
-   #}
-
    # ==================
    # Fill in any missing data with data interpolated from stations within 100km of the station using a normal ratio method
    # Are there stations within 100 km?
@@ -95,13 +84,6 @@ snow_datafill <- function(data_soi, data_id, normal_max, normal_min, ...) {
   # Assign a column with the number of years that have 80% of the daily SWE within a snow accumulation year
   all_swe$numberofyears_estimated_80 <- dim(all_80)[1]
 
-  # If the station is a manual station
- } else if (unique(data$id) %in% bcsnowdata::snow_manual_location()$LOCATION_ID) {
-  # Interpolation for data from manual stations
-  # Does the station have between 10-20 years of data? It is a manual site? Then, extend the data using a correlation method to a neighbouring station.
-  # if the station is a manual station with less that 10 years of data
-  # correlation relationship, based on a neighboring station with a long period of record.
- }
   # Return the estimated dataset
   return(all_swe)
 }
