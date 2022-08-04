@@ -229,8 +229,10 @@ calc_norm <- function(stn_id, df_nt, df_normal_80, normal_max, normal_min) {
     all_swe <- df_normal_time %>%
      #dplyr::filter(wr %in% df_normal_80$wr) %>%
       dplyr::mutate(numberofyears_estimated_80 = numberofyears_80$numberofyears_80_raw) %>%
-      dplyr::mutate(swe_fornormal = values_stats)%>%
+      dplyr::mutate(swe_fornormal = values_stats) %>%
       dplyr::mutate(data_flag = ">20 years of data; no data filling")
+
+    all_swe$swe_fornormal <- zoo::na.approx(all_swe$swe_fornormal, na.rm = T, maxgap = 7) # Fill any gaps with linear interpolation
   }
 
   # End of data filling according to thresholds
