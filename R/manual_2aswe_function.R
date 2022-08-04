@@ -112,7 +112,7 @@ manual_2aswe <- function(id, normal_max, normal_min) {
                                              dplyr::select(-station_type)) %>%
           dplyr::filter(!is.na(manual_swe)) %>%
           dplyr::mutate(data_flag = ifelse(is.na(aswe_swe), "estimated", "raw")) %>%
-          dplyr::mutate(swe_out = ifelse(is.na(aswe_swe), est_aswe, aswe_swe)) %>%
+          dplyr::rename(swe_out = aswe_swe) %>%
           dplyr::select(Date, survey_period, swe_out, data_flag)
       }
 
@@ -131,9 +131,11 @@ manual_2aswe <- function(id, normal_max, normal_min) {
         dplyr::group_by(survey_period) %>%
         dplyr::summarize(number_years = length(swe_out)) %>%
         dplyr::full_join(years_filled) %>%
-        dplyr::filter(number_years >= 10) %>%
         dplyr::group_by(survey_period) %>%
-        dplyr::mutate(data_range_normal = paste0((min(lubridate::year(years_filled_10$Date), na.rm = TRUE)), " to ", (max(lubridate::year(years_filled_10$Date), na.rm = TRUE))))
+        dplyr::mutate(data_range_normal = paste0((min(lubridate::year(Date), na.rm = TRUE)), " to ", (max(lubridate::year(Date), na.rm = TRUE)))) %>%
+        dplyr::filter(number_years >= 10)
+
+      if (dim(years_filled_10)[1] > 0) {
 
       # Calculate the normal statistics for each day of the year
       df_normals <- do.call(data.frame,
@@ -172,6 +174,9 @@ manual_2aswe <- function(id, normal_max, normal_min) {
 
       dates <- dplyr::full_join(min_date, max_date)
       df_normals_out <- dplyr::full_join(df_normals, dates)
+      } else {
+        df_normals_out <- NA
+      }
     } else {
       df_normals_out <- NA
     }
