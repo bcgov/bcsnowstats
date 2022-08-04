@@ -119,7 +119,7 @@ int_aswenorm <- function(data, normal_max, normal_min, data_id) {
     dplyr::mutate(percent_available = length(values_stats) / length(seq(as.Date("2020-10-01"), as.Date("2021-06-30"), by = "day")) * 100) %>%
     dplyr::select(id, wr, percent_available) %>%
     unique() %>%
-    dplyr::filter(percent_available >= 80) # filter by the 80% WMO threshold
+    dplyr::filter(percent_available >= 60) # filter by the 80% WMO threshold
 
   # Get the number of years within the normal range with >= 80% data coverage within a specific year
   ny_80 <- df_normal_80 %>%
