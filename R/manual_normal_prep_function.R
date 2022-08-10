@@ -18,11 +18,12 @@
 #' @param normal_max date of the max normal year
 #' @param data_id column name you are calculating normals for
 #' @param force Whether to force the recalculation of the normals. Defaults to FALSE
+#' @param ask Whether to ask whether it is ok to write a cached version of normals. Defaults to FALSE or no
 #' @export
 #' @keywords internal
 #' @examples \dontrun{}
 
-manual_normal_prep <- function(data, normal_max, normal_min, data_id, force = FALSE) {
+manual_normal_prep <- function(data, normal_max, normal_min, data_id, force = FALSE, ask = FALSE) {
 
   # ------------------------- Format data -------------------------
   # Check to make sure that data has a wr column
