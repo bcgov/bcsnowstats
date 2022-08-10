@@ -143,7 +143,8 @@ calc_man_norm <- function(station, df_time, normal_max, normal_min) {
 
     # Fill in data from adjacent stations using manual_datafill() function. Only fill for survey periods between 10-20 years of raw data
     all_swe <- manual_datafill(data = dplyr::full_join(df_st, num_obs),
-                             normal_max, normal_min, survey_periods_20, num_obs)
+                             normal_max, normal_min, survey_periods_20, num_obs) %>%
+      dplyr::arrange(survey_period_year)
 
     # Group by survey data and filter so you are only calculating normals for stations with at least 20 years of raw+ predicted data
     all_swe_1 <- all_swe %>%
