@@ -5,7 +5,14 @@
 \title{Internal function for filling in missing data and calculating normals for manual snow survey data
 January 2021, Ashlee Jollymore}
 \usage{
-manual_normal_prep(data, normal_max, normal_min, data_id, force = FALSE)
+manual_normal_prep(
+  data,
+  normal_max,
+  normal_min,
+  data_id,
+  force = FALSE,
+  ask = FALSE
+)
 }
 \arguments{
 \item{data}{manual snow data you are calculating normals for}
@@ -17,6 +24,8 @@ manual_normal_prep(data, normal_max, normal_min, data_id, force = FALSE)
 \item{data_id}{column name you are calculating normals for}
 
 \item{force}{Whether to force the recalculation of the normals. Defaults to FALSE}
+
+\item{ask}{Whether to ask whether it is ok to write a cached version of normals. Defaults to FALSE or no}
 }
 \description{
 Internal function for filling in missing data and calculating normals for manual snow survey data
