@@ -107,8 +107,8 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
     #Remove stations that are not significantly correlated.
     cof <- data.frame(summary(lm1)$coefficients) %>%
       dplyr::rename(pr = "Pr...t..") %>%
-      dplyr::mutate(pr = as.numeric(pr)) %>%
-      dplyr::filter(pr  < 0.15)
+      dplyr::mutate(pr = as.numeric(pr)) #%>%
+      #dplyr::filter(pr  < 0.15)
 
     cof$station <- gsub("[[:punct:]]", "", row.names(cof))
 
@@ -171,9 +171,9 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
       #                                   as.Date(all_swe_p$survey_period_year, format = "%d-%b-%Y")))) %>%
        dplyr::arrange(survey_period)
 
-     all_swe_p$snow_course_name <- unique(all_swe_p$snow_course_name)[!is.na(unique(all_swe_p$snow_course_name))]
+
      all_swe_p$id <- unique(all_swe_p$id)[!is.na(unique(all_swe_p$id))]
-     all_swe_p$numberofyears_raw <- unique(all_swe_p$numberofyears_raw)[!is.na(unique(all_swe_p$numberofyears_raw))]
+     #all_swe_p$numberofyears_raw <- unique(all_swe_p$numberofyears_raw)[!is.na(unique(all_swe_p$numberofyears_raw))]
 
      # Get the number of years of raw+predicted data
      num_obs_pred <- all_swe_p %>%
@@ -194,11 +194,13 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
 
      # Calculate normal values from the simulated/augmented dataset
      # Only calculate normals for survey periods that now have 20+ years of data (raw + predicted)
-     all_swe_1 <- dplyr::full_join(all_swe, num_obs)
+     all_swe_1 <- dplyr::full_join(all_swe, num_obs) %>%
+       dplyr::full_join(num_obs %>% dplyr::select(id, survey_period, numberofyears_raw))
 
-     all_swe_1$snow_course_name <- zoo::na.locf(all_swe_1$snow_course_name, fromLast = TRUE, na.rm = F)
-     all_swe_1$id <- zoo::na.locf(all_swe_1$id, fromLast = TRUE, na.rm = F)
-     all_swe_1$elev_metres <- zoo::na.locf(all_swe_1$elev_metres, fromLast = TRUE, na.rm = F)
+     all_swe_1$snow_course_name <- unique(all_swe_1$snow_course_name)[!is.na(unique(all_swe_1$snow_course_name))]
+     all_swe_1$id <- unique(all_swe_1$id)[!is.na(unique(all_swe_1$id))]
+     all_swe_1$elev_metres <- unique(all_swe_1$elev_metres)[!is.na(unique(all_swe_1$elev_metres))]
+
     }
 
    } else {
