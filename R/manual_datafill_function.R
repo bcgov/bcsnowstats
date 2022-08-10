@@ -74,19 +74,26 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
      dplyr::filter(id %in% unique(stations_adj_20$id)) %>%
      dplyr::select(id, survey_period, swe_mm, date_utc, wr) %>%
      dplyr::rename(swe_adj = swe_mm, station_id_adj = id) %>%
-     dplyr::mutate(survey_period_year = paste0(survey_period, "-", wr))
+     # Add in a date vector that reflects the survey period and year
+     dplyr::mutate(survey_period_year = ifelse(survey_period == "01-Dec",
+                                               paste0(survey_period, "-", wr - 1),
+                                               paste0(survey_period, "-", wr)))
 
    # If there is data from adjacent sites within the normal range, use it to fill in data.
    if (dim(data_adj_select)[1] > 0) {
+
     data_adj_cast <- reshape::cast(data_adj_select, survey_period_year ~ station_id_adj, fun.aggregate = sum, value = c("swe_adj"), fill = NA_real_) %>%
       dplyr::mutate(date = as.Date(survey_period_year, format = "%d-%b-%Y")) %>%
       dplyr::arrange(date)
 
     df_normal_time_select <- data %>%
-      dplyr::mutate(survey_period_year = paste0(survey_period, "-", wr)) %>%
+      dplyr::mutate(survey_period_year = ifelse(survey_period == "01-Dec",
+                                                paste0(survey_period, "-", wr - 1),
+                                                paste0(survey_period, "-", wr))) %>%
       dplyr::select(id, survey_period, values_stats, date_utc, survey_period_year, wr)
 
-    data_all <- dplyr::full_join(df_normal_time_select, data_adj_cast, by = c("survey_period_year")) %>%
+    data_all <- dplyr::full_join(df_normal_time_select,
+                                 data_adj_cast) %>%
       dplyr::ungroup() %>%
       dplyr::select(-survey_period_year, -m_d, -id, -survey_period, -date_utc, -date, -wr) %>%
       dplyr::filter(!is.na(values_stats))  # filter missing values within the station you are looking at (y)
@@ -101,7 +108,7 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
     cof <- data.frame(summary(lm1)$coefficients) %>%
       dplyr::rename(pr = "Pr...t..") %>%
       dplyr::mutate(pr = as.numeric(pr)) %>%
-      dplyr::filter(pr  < 0.05)
+      dplyr::filter(pr  < 0.15)
 
     cof$station <- gsub("[[:punct:]]", "", row.names(cof))
 
@@ -151,11 +158,22 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
         dplyr::arrange(survey_period_year)
 
      # Join with the predicted SWE
-     all_swe_p <- dplyr::full_join(incomplete, data_all_s %>% dplyr::select(survey_period_year, predicted), by = "survey_period_year") %>%
+     all_swe_p <- dplyr::full_join(incomplete %>%
+                                     dplyr::mutate(date_utc = as.Date(date_utc)),
+                                   data_all_s %>%
+                                     dplyr::select(survey_period_year, predicted)) %>%
        dplyr::arrange(date_utc) %>%
        dplyr::mutate(swe_fornormal = ifelse(!is.na(values_stats), values_stats, predicted)) %>%
        dplyr::arrange(survey_period_year) %>%
-       dplyr::mutate(survey_period = ifelse(!is.na(survey_period), survey_period, substr(survey_period_year, 1, 6)))
+       dplyr::mutate(survey_period = ifelse(!is.na(survey_period), survey_period, substr(survey_period_year, 1, 6))) %>%
+       #dplyr::mutate(date_utc_1 = as.Date(ifelse(!is.na(date_utc_1),
+      #                                   date_utc_1,
+      #                                   as.Date(all_swe_p$survey_period_year, format = "%d-%b-%Y")))) %>%
+       dplyr::arrange(survey_period)
+
+     all_swe_p$snow_course_name <- unique(all_swe_p$snow_course_name)[!is.na(unique(all_swe_p$snow_course_name))]
+     all_swe_p$id <- unique(all_swe_p$id)[!is.na(unique(all_swe_p$id))]
+     all_swe_p$numberofyears_raw <- unique(all_swe_p$numberofyears_raw)[!is.na(unique(all_swe_p$numberofyears_raw))]
 
      # Get the number of years of raw+predicted data
      num_obs_pred <- all_swe_p %>%
