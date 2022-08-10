@@ -63,13 +63,13 @@ Thirdly, the number of years of data was used to determine how data was treated 
 1. If a station had at least 20 years of data within the normal period, then the normals were calculated from the mean SWE for each day without further manipulation.
 2. If a station had between 10-19 years of data, data from adjacent stations were used to fill in data. If this data filling procedure resulted in at least 20 years of data, then snow normals were calculated. If not, then no normal values were calculated for the station. 
 
-3. If a station had less that 10 years of data, no normals were calculated. 
+3. If a station had less that 10 years of data and was converted from a manual site AND has at least 4 years of data overlap between the manual and automated snow measurement, then then linear relationship between the manual and automated measurement was used to extend the automated snow data for specific survey dates in which there was a manual snow measurement. If the site does not have a manual measurement, or if there was not at least 4 years of overlap between the two, then the ASWE data was left as is and no normal statistics calculated.
 
 Details regarding the application of these thresholds is shown below.
 
 #### 1. Stations with 20 or More Years of Data
 
-Stations with at least 20 years of data (where a year is only counted if there was at least 80% of the daily data present within the snow accumulation and melt period) was used without modification to calculate normals. The only data pre-processing step in this case was the calculation of daily mean SWE values in cases where raw hourly values were available.
+Stations with at least 20 years of data (where a year is only counted if there was at least 60% of the daily data present within the snow accumulation and melt period) was used without modification to calculate normals. The only data pre-processing step in this case was the calculation of daily mean SWE values in cases where raw hourly values were available. Additionally, gaps of 7 days or less within the data were filled within the daily SWE data using a linear interpolation.
 
 #### 2. Stations with 10-19 Years of Data
 
@@ -188,7 +188,7 @@ aswe_n_1991t2020_excel_melt <- reshape2::melt(aswe_n_1991t2020_excel, id = c("ST
 # Read in the csv files created and get only the 1st and 15th
 get1_15 <- function(site, normal_max, normal_min, force) {
 
-  normal <- normal_site(site, normal_max, normal_min, force)
+  normal <- SWE_normals(site, normal_max, normal_min, force)
 
   if (all(!is.na(normal))) {
    normal_1_15 <- normal %>%
@@ -213,22 +213,22 @@ aswe_sites <- bcsnowdata::snow_auto_location()$LOCATION_ID
 #  dplyr::mutate(month = lubridate::month(as.Date(paste0(m_d, "-2020"), format = "%m-%d-%Y"))) %>%
 #  dplyr::filter(month >= 10 | month <= 6)
 
-aswe_n_1991t2020_r <- read.csv(paste0("G:/Snow/Normals_2020/snownormals_1991t2020_rprocess/", "aswe_firstfiftheenth", ".csv")) %>%
+aswe_n_1991t2020_r <- read.csv(paste0("G:/Snow/Normals_Rprocess/normals_2020_rprocess.csv")) %>%
 #aswe_n_1991t2020_r <- normals_1t15_unfold %>%
-  dplyr::select(station_id, normal_swe_mean, m_d) %>%
+  dplyr::select(id, normal_swe_mean, m_d) %>%
   dplyr::mutate(date = as.Date(m_d, "%m-%d")) %>%
   dplyr::mutate(date = format(date, "%b%d")) %>%
-  dplyr::rename(STATIONID = station_id, normal_1991t2020_r = normal_swe_mean) %>%
+  dplyr::rename(STATIONID = id, normal_1991t2020_r = normal_swe_mean) %>%
   dplyr::mutate(normal_1991t2020_r = round(normal_1991t2020_r, digits = 0)) %>%
   dplyr::select(-m_d)
 
 # Get the data for 1981-2010
-aswe_n_1981t2010_r <- read.csv(paste0("G:/Snow/Normals_2020/snownormals_1991t2020_rprocess/", "aswe_firstfiftheenth_1981t2010", ".csv")) %>%
+aswe_n_1981t2010_r <- read.csv(paste0("G:/Snow/Normals_Rprocess/normals_2010_rprocess.csv")) %>%
 #aswe_n_1991t2020_r <- normals_1t15_unfold %>%
-  dplyr::select(station_id, normal_swe_mean, m_d) %>%
+  dplyr::select(id, normal_swe_mean, m_d) %>%
   dplyr::mutate(date = as.Date(m_d, "%m-%d")) %>%
   dplyr::mutate(date = format(date, "%b%d")) %>%
-  dplyr::rename(STATIONID = station_id, normal_1981t2010_r = normal_swe_mean) %>%
+  dplyr::rename(STATIONID = id, normal_1981t2010_r = normal_swe_mean) %>%
   dplyr::mutate(normal_1981t2010_r = round(normal_1981t2010_r, digits = 0)) %>%
   dplyr::select(-m_d)
 
