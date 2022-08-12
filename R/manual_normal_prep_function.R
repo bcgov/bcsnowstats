@@ -59,11 +59,10 @@ manual_normal_prep <- function(data, normal_max, normal_min, data_id, force = FA
     check_write_to_data_dir(dir, ask)
 
     # Calculate the normal data for all days of the year. Run function over all of the stations within a dataframe
-    df_normals_out  <- do.call(rbind,
-                                lapply(unique(df_time$id),
+    df_normals_out  <- data.table::rbindlist(lapply(unique(df_time$id),
                                   calc_man_norm,
                                   df_time,
-                                  normal_max, normal_min))
+                                  normal_max, normal_min), fill = TRUE)
 
     # Save archive - all data before current year
     saveRDS(df_normals_out, fpath)
