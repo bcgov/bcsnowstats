@@ -195,6 +195,7 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
      # Calculate normal values from the simulated/augmented dataset
      # Only calculate normals for survey periods that now have 20+ years of data (raw + predicted)
      all_swe_1 <- dplyr::full_join(all_swe, num_obs) %>%
+       dplyr::select(-numberofyears_raw) %>%
        dplyr::full_join(num_obs %>% dplyr::select(id, survey_period, numberofyears_raw))
 
      all_swe_1$snow_course_name <- unique(all_swe_1$snow_course_name)[!is.na(unique(all_swe_1$snow_course_name))]
