@@ -224,5 +224,7 @@ calc_man_norm <- function(station, df_time, normal_max, normal_min) {
 
   df_all <- dplyr::full_join(df_10t30, df_normals_10) %>%
     unique() %>%
-    dplyr::mutate(initial_normal_range = paste0(normal_min, " to ", normal_max))
+    dplyr::mutate(initial_normal_range = paste0(normal_min, " to ", normal_max)) %>%
+    dplyr::mutate(date_min_normal_utc = as.Date(date_min_normal_utc)) %>%
+    dplyr::mutate(date_max_normal_utc = as.Date(date_max_normal_utc))
 }
