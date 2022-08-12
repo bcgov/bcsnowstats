@@ -21,6 +21,9 @@
 
 manual_normal <- function(data) {
 
+  data <- data %>%
+    dplyr::group_by(id, survey_period)
+
  # Calculate the normal statistics for each day of the year
  df_normals <- do.call(data.frame,
                       list(dplyr::summarise(data, normal_minimum = min(swe_fornormal, na.rm = TRUE), .groups = "keep"),
