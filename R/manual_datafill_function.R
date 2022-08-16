@@ -208,14 +208,20 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
       # If there are no manual sites within 100 km with data within the normal period, do not do any data filling
       all_swe_1 <- data %>%
          dplyr::mutate(numberofyears_estimated = numberofyears_raw) %>%
-         dplyr::mutate(swe_fornormal = values_stats)
+         dplyr::mutate(swe_fornormal = values_stats) %>%
+         dplyr::mutate(survey_period_year = ifelse(survey_period == "01-Dec",
+                                                  paste0(survey_period, "-", wr - 1),
+                                                  paste0(survey_period, "-", wr)))
    }
 
  } else {
    # If there are no manual sites within 100 km, don't do any datafilling
     all_swe_1 <- data %>%
        dplyr::mutate(numberofyears_estimated = numberofyears_raw) %>%
-       dplyr::mutate(swe_fornormal = values_stats)
+       dplyr::mutate(swe_fornormal = values_stats) %>%
+       dplyr::mutate(survey_period_year = ifelse(survey_period == "01-Dec",
+                                                paste0(survey_period, "-", wr - 1),
+                                                paste0(survey_period, "-", wr)))
  }
 
  return(all_swe_1)
