@@ -142,7 +142,7 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
                                       dplyr::filter(wr <= normal_max & wr >= normal_min),  # Filter by the normal dates that you specify
                                     data_adj_cast_date[, c("survey_period_year", gsub("[[:punct:]]", "", row.names(cof)))], by = c("survey_period_year")) %>%
       dplyr::ungroup() %>%
-      dplyr::arrange(survey_period_year) %>%
+      #dplyr::arrange(survey_period_year) %>%
       dplyr::mutate(survey_period = ifelse(!is.na(survey_period), survey_period, substr(survey_period_year, 1, 6))) %>%
       dplyr::filter(survey_period %in% survey_periods_20$survey_period) #Sort by only the survey periods that have 10-20 years of data
 
@@ -154,8 +154,8 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
      incomplete <- data %>%
         dplyr::filter(wr <= normal_max & wr >= normal_min) %>%
         dplyr::filter(survey_period %in% survey_periods_20$survey_period) %>%
-        dplyr::mutate(survey_period_year = paste0(survey_period, "-", wr)) %>%
-        dplyr::arrange(survey_period_year)
+        dplyr::mutate(survey_period_year = paste0(survey_period, "-", wr)) #%>%
+        #dplyr::arrange(survey_period_year)
 
      # Join with the predicted SWE
      all_swe_p <- dplyr::full_join(incomplete %>%
@@ -164,12 +164,11 @@ manual_datafill <- function(data, normal_max, normal_min, survey_periods_20, num
                                      dplyr::select(survey_period_year, predicted)) %>%
        dplyr::arrange(date_utc) %>%
        dplyr::mutate(swe_fornormal = ifelse(!is.na(values_stats), values_stats, predicted)) %>%
-       dplyr::arrange(survey_period_year) %>%
-       dplyr::mutate(survey_period = ifelse(!is.na(survey_period), survey_period, substr(survey_period_year, 1, 6))) %>%
+       #dplyr::arrange(survey_period_year) %>%
+       dplyr::mutate(survey_period = ifelse(!is.na(survey_period), survey_period, substr(survey_period_year, 1, 6)))
        #dplyr::mutate(date_utc_1 = as.Date(ifelse(!is.na(date_utc_1),
       #                                   date_utc_1,
-      #                                   as.Date(all_swe_p$survey_period_year, format = "%d-%b-%Y")))) %>%
-       dplyr::arrange(survey_period)
+      #                                   as.Date(all_swe_p$survey_period_year, format = "%d-%b-%Y"))))
 
 
      all_swe_p$id <- unique(all_swe_p$id)[!is.na(unique(all_swe_p$id))]
