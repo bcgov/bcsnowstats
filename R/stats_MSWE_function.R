@@ -89,7 +89,7 @@ stats_MSWE <- function(station_id, survey_period,
 
   # create an empty row for stations that did not return any data for the period specified
   if (!isTRUE(all.equal(stations, unique(df_final_1$id))) | !is.data.frame(df_final_1)) {
-   missing <- tibble::tibble(station_id = stations[!(stations %in% unique(df_final_1$station_id))])
+   missing <- tibble::tibble(id = stations[!(stations %in% unique(df_final_1$station_id))])
    df_final_2 <- dplyr::bind_rows(df_final_1, missing)
   } else {
    df_final_2 <- df_final_1
