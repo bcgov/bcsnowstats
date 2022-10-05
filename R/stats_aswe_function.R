@@ -85,7 +85,8 @@ stats_aswe <- function(station_id, parameter_id = "SWE", survey_period = "All", 
   # create an empty row for stations that did not return any data for the period specified
   if (!isTRUE(all.equal(station_list, unique(df_final_1$id))) | !is.data.frame(df_final_1)) {
     missing <- tibble::tibble(id = station_list[!(station_list %in% unique(df_final_1$id))])
-    df_final_2 <- dplyr::bind_rows(df_final_1, missing)
+    df_final_2 <- dplyr::bind_rows(df_final_1, missing) %>%
+      dplyr::arrange(id)
   } else {
     df_final_2 <- df_final_1
   }
