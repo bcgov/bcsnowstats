@@ -355,7 +355,7 @@ The above boxplot shows differences between: 1) the 1981-2010 and 1991-2020 snow
 
 Future work will focus on stations that have been converted from a manual to ASWE station, and whether manual data can be used to fill in data missing from the ASWE period of record. 
 
-## How Snow Normals For Manual Sites
+## How Snow Normals Were Calculated For Manual Sites
 For manual snow survey periods with 10 - 20 years of record for a particular site, a correlation relationship (based on neighboring stations with a long period of record) was used to fill in missing years. If this resulted in at least 20 years of data, then a normal was calculated for the survey period. This section details how data for stations with 10-20 years of data for a particular survey period was filled using adjacent stations. Normals were calculated directly for survey periods with 20-30 years of data. Survey periods that had less than 10 years of record were not used to calculate manuals. 
 
 ### Data Filling for Survey Periods with 20-30 Years of Data
