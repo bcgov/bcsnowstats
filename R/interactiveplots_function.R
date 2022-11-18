@@ -470,7 +470,8 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
 
     ## Calculate the days to peak snow normal. Partition if there is >50% of the normals present
     # If there is a normal for the station and there is more that 50% of the data present, calculate statistics
-    if (sum(!is.na(df$normal_Q50)) / length(df$normal_Q50) > 0.5 && all(!is.null(df$normal_Q50))) {
+    #if (sum(!is.na(df$normal_Q50)) / length(df$normal_Q50) > 0.5 && all(!is.null(df$normal_Q50))) {
+    if (all(!is.null(df$normal_Q50))) {
 
       norm_q50 <- subset(d_all_stats, variable == "Normal (1981-2010)")
       date_max <- norm_q50$date_utc[norm_q50$value == max(norm_q50$value, na.rm = TRUE)]
@@ -1385,3 +1386,4 @@ plot_manual <- function(station, data_plot_1, save, path) {
     }
   }
 }
+
