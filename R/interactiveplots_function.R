@@ -489,7 +489,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
       # Typical Percent of median peak for this date
       typical_percentnorm <- round(norm_q50$value_5[na.omit(norm_q50$date_utc == date_last)] / max(norm_q50$value_5, na.rm = TRUE)*100, digits = 0)
       typical_percentnorm <- paste0(typical_percentnorm, "%")
-    } else if (all(is.null(df$normal_Q50)) | all(is.na(df$normal_Q50))) {
+    } else if (all(is.null(df$normal_Q50)) | all(is.na(df$normal_Q50)) | sum(!is.na(df$normal_Q50)) / length(df$normal_Q50) < 0.5) {
 
       norm_q50 <- subset(d_all_stats, variable == "Normal (1981-2010)")
       date_max <- "Insufficient data"
