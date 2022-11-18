@@ -534,6 +534,10 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
 
     if (class(date_peak) == "Date") { # if there is a calculated peak normal
       deltaSWE <- deltaSWE_datetopeak(df, lastday_data, date_peak)
+
+      #if (dim(deltaSWE)[1] > 1) {
+      #  deltaSWE = deltaSWE[which(deltaSWE$date_peak == date_peak), ]
+      #}
     }
 
     # ==========
@@ -547,7 +551,8 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
     if (all(is.na(max_SWE_currentyear_1$value))) {
       peakstatus = "No data"
       percentpeak_vs_norm = "No data"
-      percentpeak_vs_median = "No data" } else {
+      percentpeak_vs_median = "No data"
+    } else {
 
         if (d_all_curr$value[max(which(!is.na(d_all_curr$value)))] < max_SWE_currentyear-30) {
           peakstatus = "POST"
@@ -570,6 +575,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
     # plot the SWE across the entire period
     # =======================
     if (dim(d_all_stats)[1] > 0) {
+
       p <- plotly::plot_ly() %>%
         plotly::add_ribbons(data = bands,
                           x = bands$date_utc,
@@ -738,6 +744,7 @@ plot_function <- function(stn_id, data_plot_1, save, path) {
     # Add the projections if they exist and the time is before the peak
     if (exists("deltaSWE") && peakstatus == "PRE") {
       if (dim(deltaSWE)[1] > 0) {
+
         p <- p %>%
           plotly::add_trace(data = deltaSWE,
                             x = as.Date(deltaSWE$date_peak),
